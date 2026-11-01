@@ -2587,7 +2587,6 @@ class _AboutState extends State<_About> {
       };
     }(), hasData: (data) {
       final license = data['license'].toString();
-      final version = data['version'].toString();
       final buildDate = data['buildDate'].toString();
       final fingerprint = data['fingerprint'].toString();
       final myId = data['myId'].toString();
@@ -2602,8 +2601,9 @@ class _AboutState extends State<_About> {
               const SizedBox(
                 height: 8.0,
               ),
+              loadParsipolBrand().marginSymmetric(vertical: 8.0),
               SelectionArea(
-                  child: Text('${translate('Version')}: $version')
+                  child: Text('${translate('Version')}: $kParsiDeskVersion')
                       .marginSymmetric(vertical: 4.0)),
               SelectionArea(
                   child: Text('${translate('Build Date')}: $buildDate')
@@ -2621,14 +2621,6 @@ class _AboutState extends State<_About> {
                   },
                   child: Text(
                     'ParsiDesk ساخته‌شده توسط پارسیپل (Parsipol.com)',
-                    style: linkStyle,
-                  ).marginSymmetric(vertical: 4.0)),
-              InkWell(
-                  onTap: () {
-                    launchUrlString('https://desk.parsipol.com');
-                  },
-                  child: Text(
-                    translate('Privacy Statement'),
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
               InkWell(
@@ -2654,6 +2646,11 @@ class _AboutState extends State<_About> {
                             'Copyright © ${DateTime.now().toString().substring(0, 4)} Purslane Tech Pte. Ltd.\n$license',
                             style: const TextStyle(color: Colors.white),
                           ),
+                          Text(
+                            translate('license_notice'),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 12),
+                          ).marginOnly(top: 6, bottom: 6),
                           Text(
                             translate('Slogan_tip'),
                             style: TextStyle(

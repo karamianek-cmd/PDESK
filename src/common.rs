@@ -1063,20 +1063,82 @@ pub fn apply_parsidesk_defaults() {
     // The Parsipol server is the open-source ID/relay server: it has no HTTP API on port 21114.
     // "register-device" = "N" stops the client from sending device info/heartbeats there
     // (and from logging a failed request every minute).
-    config::BUILTIN_SETTINGS
-        .write()
-        .unwrap()
-        .insert("register-device".to_owned(), "N".to_owned());
+    // The other built-in switches hide parts of the interface that need an API server.
+    {
+        let mut builtin = config::BUILTIN_SETTINGS.write().unwrap();
+        for (k, v) in [
+            ("register-device", "N"),
+            ("hide-powered-by-me", "Y"),
+            ("hide-username-on-card", "Y"),
+            ("hide-remote-printer-setting", "Y"),
+        ] {
+            builtin.insert(k.to_owned(), v.to_owned());
+        }
+    }
+    {
+        // No login/account, address book or group panel: they only work with an API server.
+        let mut hard = config::HARD_SETTINGS.write().unwrap();
+        for k in ["disable-account", "disable-ab", "disable-group-panel"] {
+            hard.entry(k.to_owned()).or_insert_with(|| "Y".to_owned());
+        }
+    }
 }
 
+// The version users see (About screen, update notices). It is independent of the internal
+// protocol version (crate::VERSION), which other devices use to decide which features to enable.
+pub const PARSIDESK_VERSION: &str = "1.0.0";
+const PARSIDESK_VERSION_URL: &str = "https://desk.parsipol.com/version.json";
+
 pub fn check_software_update() {
-    if !PARSIDESK_CHECK_UPDATES || is_custom_client() {
-        return;
-    }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);
     if config::option2bool(keys::OPTION_ENABLE_CHECK_UPDATE, &opt) {
-        std::thread::spawn(move || allow_err!(do_check_software_update()));
+        std::thread::spawn(move || allow_err!(do_check_parsidesk_update()));
     }
+}
+
+// Reads {"version": "x.y.z"} from desk.parsipol.com and tells the UI when a newer ParsiDesk exists.
+#[tokio::main(flavor = "current_thread")]
+async fn do_check_parsidesk_update() -> hbb_common::ResultType<()> {
+    let url = PARSIDESK_VERSION_URL.to_owned();
+    let proxy_conf = Config::get_socks();
+    let tls_url = get_url_for_tls(&url, &proxy_conf);
+    let tls_type = get_cached_tls_type(tls_url).unwrap_or(TlsType::Rustls);
+    let client = create_http_client_async(tls_type, false);
+    let response = client.get(&url).send().await?;
+    if !response.status().is_success() {
+        bail!("Version check failed with HTTP status: {}", response.status());
+    }
+    let bytes = response.bytes().await?;
+    process_parsidesk_version_response(&bytes)
+}
+
+fn process_parsidesk_version_response(bytes: &[u8]) -> ResultType<()> {
+    #[derive(serde::Deserialize)]
+    struct LatestVersion {
+        version: String,
+    }
+    let latest: LatestVersion = serde_json::from_slice(bytes)?;
+    let latest = latest.version.trim().trim_start_matches('v').to_owned();
+    if latest.split('.').count() != 3 || !latest.chars().all(|c| c.is_ascii_digit() || c == '.') {
+        bail!("Unexpected version format: {}", latest);
+    }
+    if get_version_number(&latest) > get_version_number(PARSIDESK_VERSION) {
+        // The last path segment is what the UI shows as the new version number.
+        let update_url = format!("https://desk.parsipol.com/version/{}", latest);
+        #[cfg(feature = "flutter")]
+        {
+            let mut m = HashMap::new();
+            m.insert("name", "check_software_update_finish");
+            m.insert("url", &update_url);
+            if let Ok(data) = serde_json::to_string(&m) {
+                let _ = crate::flutter::push_global_event(crate::flutter::APP_TYPE_MAIN, data);
+            }
+        }
+        *SOFTWARE_UPDATE_URL.lock().unwrap() = update_url;
+    } else {
+        clear_software_update_url();
+    }
+    Ok(())
 }
 
 pub(crate) fn release_id_from_update_url(update_url: &str) -> ResultType<String> {

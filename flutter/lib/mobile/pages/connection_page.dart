@@ -86,6 +86,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
             delegate: SliverChildListDelegate([
           if (!bind.isCustomClient() && !isIOS)
             Obx(() => _buildUpdateUI(stateGlobal.updateUrl.value)),
+          Center(child: loadParsipolBrand()).marginOnly(top: 6, bottom: 4),
           _buildRemoteIDTextField(),
         ])),
         SliverFillRemaining(
@@ -124,7 +125,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
         ? const SizedBox(height: 0)
         : InkWell(
             onTap: () async {
-              final url = 'https://desk.parsipol.com/#download';
+              final url = 'https://desk.parsipol.com/members/';
               // https://pub.dev/packages/url_launcher#configuration
               // https://developer.android.com/training/package-visibility/use-cases#open-urls-custom-tabs
               //

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -3827,6 +3826,45 @@ class _LogoState extends State<_Logo> {
 
 // max 300 x 60
 Widget loadLogo() => const _Logo();
+
+// Parsipol logo with the credit line and a link to the usage guide.
+Widget loadParsipolBrand() => const _ParsipolBrand();
+
+class _ParsipolBrand extends StatelessWidget {
+  const _ParsipolBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: () => launchUrl(Uri.parse('https://parsipol.com')),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/parsipol-logo.png',
+                  height: 30, fit: BoxFit.contain),
+              Text(translate('Made by Parsipol'),
+                  style: TextStyle(fontSize: 11, color: muted)),
+            ],
+          ),
+        ),
+        InkWell(
+          onTap: () => launchUrl(Uri.parse('https://desk.parsipol.com/#guide')),
+          child: Text(
+            translate('Usage guide'),
+            style: const TextStyle(
+                fontSize: 12,
+                color: MyTheme.accent,
+                decoration: TextDecoration.underline),
+          ).marginOnly(top: 4),
+        ),
+      ],
+    );
+  }
+}
 
 Widget loadIcon(double size) {
   return Image.asset('assets/icon.png',

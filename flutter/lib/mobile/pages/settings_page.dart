@@ -1209,8 +1209,13 @@ void showAbout(OverlayDialogManager dialogManager) {
     return CustomAlertDialog(
       title: Text(translate('About RustDesk')),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
-        Text('Version: $version'),
+        loadParsipolBrand(),
+        Text('${translate('Version')}: $kParsiDeskVersion'),
         const Text('ParsiDesk ساخته‌شده توسط پارسیپل (Parsipol.com)'),
+        SizedBox(
+            width: 260,
+            child: Text(translate('license_notice'),
+                style: const TextStyle(fontSize: 12))),
         InkWell(
             onTap: () async {
               const url = 'https://desk.parsipol.com';

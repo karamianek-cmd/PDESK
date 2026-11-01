@@ -202,11 +202,14 @@ jobs:
       with:
         name: ${{ matrix.job.arch == 'aarch64' && 'topmostwindow-artifacts-ARM64' || 'topmostwindow-artifacts-x64' }}
         path: ./rustdesk
+    - name: Name the program ParsiDesk.exe
+      if: env.UPLOAD_ARTIFACT == 'true'
+      run: mv ./rustdesk/rustdesk.exe ./rustdesk/ParsiDesk.exe
     - name: Upload unsigned
       if: env.UPLOAD_ARTIFACT == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: rustdesk-unsigned-windows-${{ matrix.job.arch }}
+        name: parsidesk-windows-portable-${{ matrix.job.arch }}
         path: rustdesk
     - name: Sign rustdesk files
       if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
@@ -258,13 +261,13 @@ jobs:
 
         pip3 install -r requirements.txt
 
-        python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+        python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/ParsiDesk.exe
 
         popd
 
         mkdir -p ./SignOutput
 
-        mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
+        mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/ParsiDesk-Setup-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
 
         '
     - name: Upload unsigned installer
@@ -274,38 +277,6 @@ jobs:
         name: parsidesk-windows-installer-${{ matrix.job.arch }}
         path: ./SignOutput/*.exe
         if-no-files-found: error
-    - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce
-      with:
-        msbuild-architecture: ${{ matrix.job.arch == 'aarch64' && 'arm64' || 'x86' }}
-    - name: Build msi
-      if: env.UPLOAD_ARTIFACT == 'true'
-      run: 'pushd ./res/msi
-
-        python preprocess.py --arp -d ../../rustdesk
-
-        nuget restore msi.sln
-
-        $msiPlatform = if (''${{ matrix.job.arch }}'' -eq ''aarch64'') { ''ARM64'' } else { ''x64'' }
-
-        msbuild msi.sln -p:Configuration=Release -p:Platform=$msiPlatform /p:TargetVersion=Windows10
-
-        $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
-
-        mv $msi.FullName ../../SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
-
-        sha256sum ../../SignOutput/rustdesk-*.msi
-
-        '
-    - name: Build pre-built MSI template
-      if: env.UPLOAD_ARTIFACT == 'true'
-      run: "git checkout -- res/msi\ncp -r ./rustdesk ./rustdesk-msi-template\nmv ./rustdesk-msi-template/rustdesk.exe ./rustdesk-msi-template/RDAPPNAM.exe\nSet-Content -Path ./rustdesk-msi-template/custom.txt -Value 'placeholder' -NoNewline\n$assets = './rustdesk-msi-template/data/flutter_assets/assets'\nNew-Item -ItemType Directory -Force -Path $assets | Out-Null\nforeach ($a in 'icon.ico','icon.png','logo.png','logo_light.png','logo_dark.png') {\n  Set-Content -Path \"$assets/$a\" -Value 'placeholder' -NoNewline\n}\npushd ./res/msi\npython preprocess.py --arp --template --revision-version 0 -d ../../rustdesk-msi-template --app-name RDAPPNAM\n$msiPlatform = if ('${{ matrix.job.arch }}' -eq 'aarch64') { 'ARM64' } else { 'x64' }\nmsbuild msi.sln -t:clean -p:Configuration=Release -p:Platform=$msiPlatform\nmsbuild msi.sln -p:Configuration=Release -p:Platform=$msiPlatform /p:TargetVersion=Windows10\n$msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1\npopd\nmkdir ./msi-template\nmv $msi.FullName ./msi-template/rustdesk-template-${{ matrix.job.arch }}.msi\ngit checkout -- res/msi\nrm -r -fo ./rustdesk-msi-template\n"
-    - name: Upload unsigned msi template
-      if: env.UPLOAD_ARTIFACT == 'true'
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-      with:
-        name: rustdesk-unsigned-msi-template-${{ matrix.job.arch }}
-        path: ./msi-template
     - name: Sign rustdesk self-extracted file
       if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
       shell: bash
@@ -318,13 +289,6 @@ jobs:
       with:
         name: windows-flutter-${{ matrix.job.arch }}-exe
         path: ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
-        if-no-files-found: error
-    - name: Upload signed Windows Flutter MSI
-      if: env.UPLOAD_ARTIFACT == 'true' && env.PUBLISH_UPDATE_METADATA == 'true' && env.SIGN_BASE_URL != '-2'
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-      with:
-        name: windows-flutter-${{ matrix.job.arch }}-msi
-        path: ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
         if-no-files-found: error
   build-rustdesk-android:
     needs:
