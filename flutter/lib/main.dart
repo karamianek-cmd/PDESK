@@ -371,6 +371,7 @@ void _runApp(
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: supportedLocales,
+      locale: appLocale(),
       navigatorObservers: [
         // FirebaseAnalyticsObserver(analytics: analytics),
         BotToastNavigatorObserver(),
@@ -512,6 +513,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: supportedLocales,
+          locale: appLocale(),
           navigatorObservers: [
             // FirebaseAnalyticsObserver(analytics: analytics),
             BotToastNavigatorObserver(),

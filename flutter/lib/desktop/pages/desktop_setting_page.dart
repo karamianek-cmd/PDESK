@@ -2617,6 +2617,14 @@ class _AboutState extends State<_About> {
                       .marginSymmetric(vertical: 4.0)),
               InkWell(
                   onTap: () {
+                    launchUrlString('https://parsipol.com');
+                  },
+                  child: Text(
+                    'ParsiDesk ساخته‌شده توسط شرکت پارسی‌پل (Parsipol.com)',
+                    style: linkStyle,
+                  ).marginSymmetric(vertical: 4.0)),
+              InkWell(
+                  onTap: () {
                     launchUrlString('https://rustdesk.com/privacy.html');
                   },
                   child: Text(

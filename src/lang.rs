@@ -192,11 +192,9 @@ pub fn translate(name: String) -> String {
 }
 
 pub fn translate_locale(name: String, locale: &str) -> String {
-    let lang = resolve_lang(
-        &hbb_common::config::LocalConfig::get_option("lang"),
-        locale,
-        cjk_ui_unavailable(),
-    );
+    let saved = hbb_common::config::LocalConfig::get_option("lang");
+    let saved = if saved.is_empty() { "fa".to_owned() } else { saved };
+    let lang = resolve_lang(&saved, locale, cjk_ui_unavailable());
     let m = match lang.as_str() {
         "fr" => fr::T.deref(),
         "zh-cn" => cn::T.deref(),

@@ -1210,6 +1210,7 @@ void showAbout(OverlayDialogManager dialogManager) {
       title: Text(translate('About RustDesk')),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
         Text('Version: $version'),
+        const Text('ParsiDesk ساخته‌شده توسط شرکت پارسی‌پل (Parsipol.com)'),
         InkWell(
             onTap: () async {
               const url = 'https://rustdesk.com/';

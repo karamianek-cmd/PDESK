@@ -690,6 +690,11 @@ List<Locale> supportedLocales = const [
   Locale('hr'),
 ];
 
+Locale? appLocale() {
+  final lang = bind.mainGetLocalOption(key: kCommConfKeyLang);
+  return lang.isEmpty || lang == 'fa' ? const Locale('fa') : null;
+}
+
 String formatDurationToTime(Duration duration) {
   var totalTime = duration.inSeconds;
   final secs = totalTime % 60;

@@ -382,7 +382,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("JumpLink", "چشم انداز"),
         ("Please Select the screen to be shared(Operate on the peer side).", "لطفاً صفحه‌ای را برای اشتراک‌گذاری انتخاب کنید (در سمت همتا به همتا کار کنید)."),
         ("Show RustDesk", "RustDesk نمایش"),
-        ("This PC", "This PC"),
+        ("This PC", "این رایانه"),
         ("or", "یا"),
         ("Elevate", "ارتقاء"),
         ("Zoom cursor", " بزرگنمایی نشانگر ماوس"),
