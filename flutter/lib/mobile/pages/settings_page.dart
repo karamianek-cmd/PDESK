@@ -1167,15 +1167,20 @@ void showLanguageSettings(OverlayDialogManager dialogManager) async {
 }
 
 void showThemeSettings(OverlayDialogManager dialogManager) async {
-  var themeMode = MyTheme.getThemeModePreference();
+  var themeChoice = MyTheme.themeChoice;
 
   dialogManager.show((setState, close, context) {
-    setTheme(v) {
-      if (themeMode != v) {
+    setTheme(v) async {
+      if (themeChoice != v) {
         setState(() {
-          themeMode = v;
+          themeChoice = v;
         });
-        MyTheme.changeDarkMode(themeMode);
+        if (v == MyTheme.kPalettePardis) {
+          await MyTheme.changePalette(pardis: true);
+        } else {
+          if (MyTheme.isPardis) await MyTheme.changePalette(pardis: false);
+          await MyTheme.changeDarkMode(MyTheme.themeModeFromString(v));
+        }
         Future.delayed(Duration(milliseconds: 200), close);
       }
     }
@@ -1183,12 +1188,14 @@ void showThemeSettings(OverlayDialogManager dialogManager) async {
     final isOptFixed = isOptionFixed(kCommConfKeyTheme);
     return CustomAlertDialog(
       content: Column(children: [
-        getRadio(Text(translate('Light')), ThemeMode.light, themeMode,
+        getRadio(Text(translate('Light')), 'light', themeChoice,
             isOptFixed ? null : setTheme),
-        getRadio(Text(translate('Dark')), ThemeMode.dark, themeMode,
+        getRadio(Text(translate('Dark')), 'dark', themeChoice,
             isOptFixed ? null : setTheme),
-        getRadio(Text(translate('Follow System')), ThemeMode.system, themeMode,
-            isOptFixed ? null : setTheme)
+        getRadio(Text(translate('Follow System')), 'system', themeChoice,
+            isOptFixed ? null : setTheme),
+        getRadio(Text(translate('Pardis theme')), MyTheme.kPalettePardis,
+            themeChoice, isOptFixed ? null : setTheme)
       ]),
     );
   }, backDismiss: true, clickMaskDismiss: true);

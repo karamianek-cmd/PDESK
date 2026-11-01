@@ -361,7 +361,7 @@ void _runApp(
       navigatorKey: globalKey,
       debugShowCheckedModeBanner: false,
       title: title,
-      theme: MyTheme.lightTheme,
+      theme: MyTheme.activeLightTheme,
       darkTheme: MyTheme.darkTheme,
       themeMode: themeMode,
       home: home,
@@ -499,7 +499,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           title: isWeb
               ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
               : bind.mainGetAppNameSync(),
-          theme: MyTheme.lightTheme,
+          theme: MyTheme.activeLightTheme,
           darkTheme: MyTheme.darkTheme,
           themeMode: MyTheme.currentThemeMode(),
           home: isDesktop

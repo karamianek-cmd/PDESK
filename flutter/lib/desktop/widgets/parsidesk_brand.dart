@@ -12,12 +12,21 @@ class PdTokens {
 
   static Color surface(BuildContext c) =>
       _dark(c) ? const Color(0xFF171B23) : Colors.white;
-  static Color border(BuildContext c) =>
-      _dark(c) ? const Color(0xFF262C38) : const Color(0xFFE5E9F0);
-  static Color muted(BuildContext c) =>
-      _dark(c) ? const Color(0xFF9AA4B5) : const Color(0xFF64748B);
-  static Color accent(BuildContext c) =>
-      _dark(c) ? const Color(0xFF5B8DEF) : MyTheme.accent;
+  static Color border(BuildContext c) => _dark(c)
+      ? const Color(0xFF262C38)
+      : MyTheme.isPardis
+          ? const Color(0xFFE2DED3)
+          : const Color(0xFFE5E9F0);
+  static Color muted(BuildContext c) => _dark(c)
+      ? const Color(0xFF9AA4B5)
+      : MyTheme.isPardis
+          ? const Color(0xFF5F7078)
+          : const Color(0xFF64748B);
+  static Color accent(BuildContext c) => _dark(c)
+      ? const Color(0xFF5B8DEF)
+      : MyTheme.isPardis
+          ? const Color(0xFF12807A)
+          : MyTheme.accent;
 }
 
 // Rounded neutral surface used for the ID, password and brand blocks.
@@ -38,8 +47,17 @@ class PdCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: PdTokens.surface(context),
-        borderRadius: BorderRadius.circular(PdTokens.radius),
+        borderRadius:
+            BorderRadius.circular(MyTheme.isPardis ? 22 : PdTokens.radius),
         border: Border.all(color: PdTokens.border(context)),
+        boxShadow: MyTheme.isPardis
+            ? const [
+                BoxShadow(
+                    color: Color(0x1214232A),
+                    blurRadius: 24,
+                    offset: Offset(0, 8))
+              ]
+            : null,
       ),
       child: child,
     );
@@ -64,7 +82,9 @@ class ParsiDeskHeader extends StatelessWidget {
               Image.asset(
                   dark
                       ? 'assets/parsidesk-symbol-dark.png'
-                      : 'assets/parsidesk-symbol.png',
+                      : MyTheme.isPardis
+                          ? 'assets/parsidesk-symbol-pardis.png'
+                          : 'assets/parsidesk-symbol.png',
                   width: 34,
                   height: 34,
                   filterQuality: FilterQuality.medium),

@@ -611,6 +611,87 @@ class MyTheme {
     ],
   );
 
+  // Bright warm "Pardis" palette (cream canvas, teal brand, gold accent).
+  static const String kPalettePardis = 'pardis';
+  static const String kPaletteOption = 'parsidesk-palette';
+
+  static bool get isPardis =>
+      bind.mainGetLocalOption(key: kPaletteOption) == kPalettePardis;
+
+  static ThemeData get pardisTheme {
+    const canvas = Color(0xFFF6F4EE);
+    const sunken = Color(0xFFEFECE4);
+    const ink = Color(0xFF14232A);
+    const teal = Color(0xFF12807A);
+    const line = Color(0xFFE2DED3);
+    const gold = Color(0xFFB8925A);
+    OutlineInputBorder ob(Color c, [double w = 1]) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: c, width: w));
+    WidgetStateProperty<Color?> tealWhenOn([double alpha = 1]) =>
+        WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? teal.withOpacity(alpha) : null);
+    final base = lightTheme;
+    return base.copyWith(
+      scaffoldBackgroundColor: canvas,
+      cardColor: Colors.white,
+      dialogBackgroundColor: Colors.white,
+      hoverColor: sunken,
+      dividerColor: line,
+      hintColor: const Color(0xFF8A979D),
+      primaryColor: teal,
+      colorScheme: const ColorScheme.light(
+          primary: teal, secondary: gold, background: sunken),
+      textTheme: base.textTheme.apply(bodyColor: ink, displayColor: ink),
+      dialogTheme: DialogTheme(
+        elevation: 12,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: line),
+        ),
+      ),
+      inputDecorationTheme: (isDesktop || isWebDesktop)
+          ? InputDecorationTheme(
+              fillColor: Colors.white,
+              filled: true,
+              isDense: true,
+              border: ob(line),
+              enabledBorder: ob(line),
+              focusedBorder: ob(teal, 1.6),
+            )
+          : base.inputDecorationTheme,
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: teal,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: tealWhenOn(),
+        trackColor: tealWhenOn(0.35),
+      ),
+      checkboxTheme: CheckboxThemeData(fillColor: tealWhenOn()),
+      radioTheme: RadioThemeData(fillColor: tealWhenOn()),
+    );
+  }
+
+  static ThemeData get activeLightTheme => isPardis ? pardisTheme : lightTheme;
+
+  static Future<void> changePalette({required bool pardis}) async {
+    await bind.mainSetLocalOption(
+        key: kPaletteOption, value: pardis ? kPalettePardis : '');
+    if (pardis) {
+      await changeDarkMode(ThemeMode.light);
+    }
+    Get.changeTheme(activeLightTheme);
+  }
+
+  static String get themeChoice =>
+      isPardis ? kPalettePardis : getThemeModePreference().toShortString();
+
   static ThemeMode getThemeModePreference() {
     return themeModeFromString(bind.mainGetLocalOption(key: kCommConfKeyTheme));
   }

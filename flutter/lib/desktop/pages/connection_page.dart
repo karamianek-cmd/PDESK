@@ -352,8 +352,16 @@ class _ConnectionPageState extends State<ConnectionPage>
       decoration: isWindows
           ? BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: PdTokens.border(context)))
+              borderRadius: BorderRadius.circular(MyTheme.isPardis ? 28 : 18),
+              border: Border.all(color: PdTokens.border(context)),
+              boxShadow: MyTheme.isPardis
+                  ? const [
+                      BoxShadow(
+                          color: Color(0x1214232A),
+                          blurRadius: 28,
+                          offset: Offset(0, 10))
+                    ]
+                  : null)
           : BoxDecoration(
               borderRadius: const BorderRadius.all(Radius.circular(13)),
               border:
@@ -434,8 +442,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                             height: 1.4,
                             letterSpacing: isWindows ? 1 : null,
                           ),
-                          textDirection:
-                              isWindows ? TextDirection.ltr : null,
+                          textDirection: isWindows ? TextDirection.ltr : null,
                           maxLines: 1,
                           cursorColor:
                               Theme.of(context).textTheme.titleLarge?.color,
@@ -538,7 +545,8 @@ class _ConnectionPageState extends State<ConnectionPage>
                         ? ElevatedButton.styleFrom(
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(11)),
+                                borderRadius: BorderRadius.circular(
+                                    MyTheme.isPardis ? 24 : 11)),
                             textStyle: const TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w600))
                         : null,

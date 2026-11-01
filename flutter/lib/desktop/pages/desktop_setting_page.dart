@@ -515,9 +515,14 @@ class _GeneralState extends State<_General> {
   }
 
   Widget theme() {
-    final current = MyTheme.getThemeModePreference().toShortString();
+    final current = MyTheme.themeChoice;
     onChanged(String value) async {
-      await MyTheme.changeDarkMode(MyTheme.themeModeFromString(value));
+      if (value == MyTheme.kPalettePardis) {
+        await MyTheme.changePalette(pardis: true);
+      } else {
+        if (MyTheme.isPardis) await MyTheme.changePalette(pardis: false);
+        await MyTheme.changeDarkMode(MyTheme.themeModeFromString(value));
+      }
       setState(() {});
     }
 
@@ -537,6 +542,11 @@ class _GeneralState extends State<_General> {
           value: 'system',
           groupValue: current,
           label: 'Follow System',
+          onChanged: isOptFixed ? null : onChanged),
+      _Radio<String>(context,
+          value: MyTheme.kPalettePardis,
+          groupValue: current,
+          label: 'Pardis theme',
           onChanged: isOptFixed ? null : onChanged),
     ]);
   }

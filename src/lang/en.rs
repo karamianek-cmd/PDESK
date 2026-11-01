@@ -301,5 +301,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("RustDesk could not obtain a usable screen from the XDG Desktop Portal, the PipeWire library may be too old", "ParsiDesk could not obtain a usable screen from the XDG Desktop Portal, the PipeWire library may be too old"),
         ("RustDesk storage", "ParsiDesk storage"),
         ("Show RustDesk", "Show ParsiDesk"),
+        ("Pardis theme", "ParsiDesk"),
     ].iter().cloned().collect();
 }

@@ -24,6 +24,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 import '../widgets/button.dart';
 import '../widgets/parsidesk_brand.dart';
+import '../widgets/pardis_art.dart';
 
 class DesktopHomePage extends StatefulWidget {
   const DesktopHomePage({Key? key}) : super(key: key);
@@ -70,6 +71,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return _buildBlock(
         child: isWindows
             ? Stack(children: [
+                if (MyTheme.isPardis)
+                  const Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 230,
+                      child: ParsiDeskBottomArt()),
                 home,
                 const Positioned(
                     right: 8, bottom: 6, child: ParsiPolCornerMark()),
@@ -147,7 +155,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       child: Container(
         width: isIncomingOnly ? 280.0 : (isWindows ? 264.0 : 200.0),
         color: isWindows
-            ? Theme.of(context).scaffoldBackgroundColor
+            ? (MyTheme.isPardis
+                ? Colors.transparent
+                : Theme.of(context).scaffoldBackgroundColor)
             : Theme.of(context).colorScheme.background,
         child: Stack(
           children: [
@@ -199,7 +209,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildRightPane(BuildContext context) {
     return Container(
       color: isWindows
-          ? PdTokens.surface(context)
+          ? (MyTheme.isPardis ? Colors.transparent : PdTokens.surface(context))
           : Theme.of(context).scaffoldBackgroundColor,
       child: ConnectionPage(),
     );
@@ -218,7 +228,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         children: [
           Container(
             width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
+            decoration: BoxDecoration(color: PdTokens.accent(context)),
           ).marginOnly(top: 5),
           Expanded(
             child: Padding(
@@ -327,7 +337,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           Container(
             width: 2,
             height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
+            decoration: BoxDecoration(color: PdTokens.accent(context)),
           ),
           Expanded(
             child: Padding(
