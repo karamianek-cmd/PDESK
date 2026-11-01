@@ -1194,7 +1194,7 @@ void showThemeSettings(OverlayDialogManager dialogManager) async {
             isOptFixed ? null : setTheme),
         getRadio(Text(translate('Follow System')), 'system', themeChoice,
             isOptFixed ? null : setTheme),
-        getRadio(Text(translate('Pardis theme')), MyTheme.kPalettePardis,
+        getRadio(Text(translate('Parsipol Theme')), MyTheme.kPalettePardis,
             themeChoice, isOptFixed ? null : setTheme)
       ]),
     );

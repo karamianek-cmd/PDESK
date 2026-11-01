@@ -826,6 +826,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Made by Parsipol", "ساخته‌شده توسط پارسیپل"),
         ("Usage guide", "راهنمای استفاده"),
         ("license_notice", "ParsiDesk نرم‌افزار آزاد است و تحت مجوز AGPL-3.0 منتشر می‌شود. برای دریافت کد منبع با پارسیپل (Parsipol.com) تماس بگیرید."),
-        ("Pardis theme", "پارسی دسک"),
+        ("Parsipol Theme", "پارسی دسک"),
     ].iter().cloned().collect();
 }

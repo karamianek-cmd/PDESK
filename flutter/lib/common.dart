@@ -615,8 +615,9 @@ class MyTheme {
   static const String kPalettePardis = 'pardis';
   static const String kPaletteOption = 'parsidesk-palette';
 
+  // The bright theme is the default; choosing Light, Dark or System stores 'off'.
   static bool get isPardis =>
-      bind.mainGetLocalOption(key: kPaletteOption) == kPalettePardis;
+      bind.mainGetLocalOption(key: kPaletteOption) != 'off';
 
   static ThemeData get pardisTheme {
     const canvas = Color(0xFFF6F4EE);
@@ -682,7 +683,7 @@ class MyTheme {
 
   static Future<void> changePalette({required bool pardis}) async {
     await bind.mainSetLocalOption(
-        key: kPaletteOption, value: pardis ? kPalettePardis : '');
+        key: kPaletteOption, value: pardis ? kPalettePardis : 'off');
     if (pardis) {
       await changeDarkMode(ThemeMode.light);
     }
@@ -713,6 +714,7 @@ class MyTheme {
   }
 
   static ThemeMode currentThemeMode() {
+    if (isPardis) return ThemeMode.light;
     final preference = getThemeModePreference();
     if (preference == ThemeMode.system) {
       if (WidgetsBinding.instance.platformDispatcher.platformBrightness ==

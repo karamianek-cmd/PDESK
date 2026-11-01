@@ -546,7 +546,7 @@ class _GeneralState extends State<_General> {
       _Radio<String>(context,
           value: MyTheme.kPalettePardis,
           groupValue: current,
-          label: 'Pardis theme',
+          label: 'Parsipol Theme',
           onChanged: isOptFixed ? null : onChanged),
     ]);
   }
