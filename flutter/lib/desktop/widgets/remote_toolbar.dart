@@ -23,6 +23,7 @@ import '../../models/platform_model.dart';
 import '../../common/shared_state.dart';
 import './popup_menu.dart';
 import './kb_layout_type_chooser.dart';
+import './support_tools.dart';
 import 'package:flutter_hbb/utils/scale.dart';
 import 'package:flutter_hbb/common/widgets/custom_scale_base.dart';
 
@@ -836,6 +837,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
 
     toolbarItems
         .add(_ControlMenu(id: widget.id, ffi: widget.ffi, state: widget.state));
+    toolbarItems.add(_SupportToolsMenu(ffi: widget.ffi));
     toolbarItems.add(_DisplayMenu(
       id: widget.id,
       ffi: widget.ffi,
@@ -1353,6 +1355,37 @@ class _ControlMenu extends StatelessWidget {
                     trailingIcon: e.trailingIcon);
               }
             }).toList());
+  }
+}
+
+class _SupportToolsMenu extends StatelessWidget {
+  final FFI ffi;
+  _SupportToolsMenu({Key? key, required this.ffi}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Rebuild when peer info, permissions or view-only change.
+    Provider.of<FfiModel>(context);
+    if (!supportToolsAvailable(ffi)) return Offstage();
+    return _IconSubmenuButton(
+        tooltip: 'Support tools',
+        icon: Icon(Icons.handyman_rounded,
+            color: Colors.white, size: _ToolbarTheme.buttonSize * 0.7),
+        color: _ToolbarTheme.blueColor,
+        hoverColor: _ToolbarTheme.hoverBlueColor,
+        ffi: ffi,
+        menuChildrenGetter: (_) => supportToolItems(ffi)
+            .map((e) => MenuButton(
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(e.icon, size: 18),
+                    Flexible(
+                        child: Text(translate(e.label))
+                            .paddingSymmetric(horizontal: 8)),
+                  ]),
+                  onPressed: e.onPressed,
+                  ffi: ffi,
+                ))
+            .toList());
   }
 }
 

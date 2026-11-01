@@ -578,6 +578,17 @@ impl<T: InvokeUiSession> Session<T> {
         self.send(Data::Message(msg));
     }
 
+    pub fn support_tool(&self, action: String) {
+        let mut misc = Misc::new();
+        misc.set_support_tool(SupportTool {
+            action,
+            ..Default::default()
+        });
+        let mut msg = Message::new();
+        msg.set_misc(misc);
+        self.send(Data::Message(msg));
+    }
+
     pub fn get_audit_server(&self, typ: String) -> String {
         if LocalConfig::get_option("access_token").is_empty() {
             return "".to_owned();
@@ -1767,6 +1778,7 @@ pub trait InvokeUiSession: Send + Sync + Clone + 'static + Sized + Default {
     fn printer_request(&self, id: i32, path: String);
     fn handle_screenshot_resp(&self, sid: String, msg: String);
     fn handle_terminal_response(&self, response: TerminalResponse);
+    fn handle_support_tool_result(&self, _res: SupportToolResult) {}
 }
 
 impl<T: InvokeUiSession> Deref for Session<T> {

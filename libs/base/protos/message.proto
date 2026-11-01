@@ -625,6 +625,19 @@ message ToggleVirtualDisplay {
   bool on = 2;
 }
 
+// ParsiDesk support toolbox (Windows peers).
+// action: "system_info", "flush_dns", "reset_network", "safe_mode", "normal_mode".
+message SupportTool {
+  string action = 1;
+}
+
+// text: JSON for "system_info", otherwise an error or status message.
+message SupportToolResult {
+  string action = 1;
+  bool ok = 2;
+  string text = 3;
+}
+
 message TogglePrivacyMode {
   string impl_key = 1;
   bool on = 2;
@@ -872,6 +885,9 @@ message Misc {
     // is rebuilt, and held again, the next time it is shown, before any connection names it
     // by id again, so the shape just selected is always there to give.
     uint64 request_cursor_data = 39;
+    // ParsiDesk only; high numbers keep clear of upstream fields.
+    SupportTool support_tool = 1001;
+    SupportToolResult support_tool_result = 1002;
   }
 }
 

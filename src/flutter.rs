@@ -1133,6 +1133,18 @@ impl InvokeUiSession for FlutterHandler {
         );
     }
 
+    fn handle_support_tool_result(&self, res: SupportToolResult) {
+        self.push_event(
+            "support_tool",
+            &[
+                ("action", json!(res.action)),
+                ("ok", json!(res.ok)),
+                ("text", json!(res.text)),
+            ],
+            &[],
+        );
+    }
+
     fn handle_screenshot_resp(&self, sid: String, msg: String) {
         match SessionID::from_str(&sid) {
             Ok(sid) => self.push_event_to("screenshot", &[("msg", json!(msg))], &[&sid]),

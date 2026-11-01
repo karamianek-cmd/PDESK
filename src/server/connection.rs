@@ -2349,6 +2349,33 @@ impl Connection {
         self.keyboard && !self.disable_keyboard
     }
 
+    // Runs off the connection loop: system info and safe mode take a few seconds.
+    #[cfg(windows)]
+    fn handle_support_tool(&mut self, action: String) {
+        use super::support_tools;
+        let allowed = self.authed_conn_type() == Some(AuthConnType::Remote)
+            && self.peer_keyboard_enabled()
+            && (!support_tools::restarts(&action) || self.restart);
+        let mut inner = self.inner.clone();
+        std::thread::spawn(move || {
+            let (ok, text) = if allowed {
+                support_tools::run(&action)
+            } else {
+                (false, "You do not have permission for this action.".to_owned())
+            };
+            let mut misc = Misc::new();
+            misc.set_support_tool_result(SupportToolResult {
+                action,
+                ok,
+                text,
+                ..Default::default()
+            });
+            let mut msg = Message::new();
+            msg.set_misc(misc);
+            inner.send(Arc::new(msg));
+        });
+    }
+
     fn clipboard_enabled(&self) -> bool {
         self.clipboard && !self.disable_clipboard
     }
@@ -3972,6 +3999,8 @@ impl Connection {
                             }
                         }
                     }
+                    #[cfg(windows)]
+                    Some(misc::Union::SupportTool(t)) => self.handle_support_tool(t.action),
                     #[cfg(windows)]
                     Some(misc::Union::ElevationRequest(r)) => match r.union {
                         Some(elevation_request::Union::Direct(_)) => {
