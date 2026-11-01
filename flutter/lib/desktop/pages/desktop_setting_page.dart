@@ -22,7 +22,7 @@ import 'package:flutter_hbb/models/printer_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/shortcut_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide WidgetMarginX;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -305,9 +305,7 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           const VerticalDivider(width: 1),
           Expanded(
             child: Container(
-              color: isWindows
-                  ? PdTokens.surface(context)
-                  : Theme.of(context).scaffoldBackgroundColor,
+              color: Theme.of(context).scaffoldBackgroundColor,
               child: PageView(
                 controller: controller,
                 physics: NeverScrollableScrollPhysics(),
@@ -323,12 +321,18 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   Widget _header(BuildContext context) {
     final settingsText = Text(
       translate('Settings'),
-      textAlign: TextAlign.left,
-      style: const TextStyle(
-        color: _accentColor,
-        fontSize: _kTitleFontSize,
-        fontWeight: FontWeight.w400,
-      ),
+      textAlign: isWindows ? TextAlign.start : TextAlign.left,
+      style: isWindows
+          ? TextStyle(
+              color: Theme.of(context).textTheme.titleLarge?.color,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            )
+          : const TextStyle(
+              color: _accentColor,
+              fontSize: _kTitleFontSize,
+              fontWeight: FontWeight.w400,
+            ),
     );
     return Row(
       children: [
@@ -351,9 +355,13 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           ).marginOnly(left: 20),
         if (!isWeb)
           SizedBox(
-            height: 62,
-            child: settingsText,
-          ).marginOnly(left: 20, top: 10),
+            height: isWindows ? 64 : 62,
+            child: isWindows
+                ? Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: settingsText)
+                : settingsText,
+          ).marginOnly(left: isWindows ? 22 : 20, top: isWindows ? 6 : 10),
         const Spacer(),
       ],
     );
@@ -2662,6 +2670,9 @@ class _AboutState extends State<_About> {
       final buildDate = data['buildDate'].toString();
       final fingerprint = data['fingerprint'].toString();
       final myId = data['myId'].toString();
+      if (isWindows) {
+        return _winAbout(context, license, buildDate, fingerprint, myId);
+      }
       const linkStyle = TextStyle(decoration: TextDecoration.underline);
       final scrollController = ScrollController();
       return SingleChildScrollView(
@@ -2755,6 +2766,185 @@ class _AboutState extends State<_About> {
   }
 }
 
+// Windows About page: brand, details, what's new, links and licence.
+Widget _winAbout(BuildContext context, String license, String buildDate,
+    String fingerprint, String myId) {
+  final muted = PdTokens.muted(context);
+  final rtl = Directionality.of(context) == TextDirection.rtl;
+  Widget section(String title, Widget child) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+        decoration: BoxDecoration(
+          color: PdTokens.surface(context),
+          borderRadius: BorderRadius.circular(PdTokens.radius),
+          border: Border.all(color: PdTokens.border(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (title.isNotEmpty)
+              Text(translate(title),
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600)),
+            if (title.isNotEmpty) const SizedBox(height: 10),
+            child,
+          ],
+        ),
+      );
+  Widget info(String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(
+              width: 110,
+              child: Text(translate(label),
+                  style: TextStyle(fontSize: 13, color: muted))),
+          Expanded(
+            child: SelectableText(value,
+                textDirection: TextDirection.ltr,
+                textAlign: rtl ? TextAlign.right : TextAlign.left,
+                style: const TextStyle(fontSize: 13.5)),
+          ),
+        ]),
+      );
+  Widget news(IconData icon, String text) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(children: [
+          Icon(icon, size: 18, color: PdTokens.accent(context)),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Text(translate(text),
+                  style: const TextStyle(fontSize: 13.5))),
+        ]),
+      );
+  Widget link(IconData icon, String label, String url) => OutlinedButton.icon(
+        onPressed: () => launchUrlString(url),
+        icon: Icon(icon, size: 18),
+        label: Text(translate(label)),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          side: BorderSide(color: PdTokens.border(context)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(PdTokens.radiusSmall)),
+        ),
+      );
+
+  return SingleChildScrollView(
+    child: Align(
+      alignment: AlignmentDirectional.topStart,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              section(
+                '',
+                Center(
+                  child: Column(children: [
+                    const ParsiDeskHeader(),
+                    InkWell(
+                      onTap: () => launchUrlString('https://parsipol.com'),
+                      borderRadius: BorderRadius.circular(PdTokens.radiusSmall),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(PdTokens.radiusSmall),
+                          border: Border.all(color: PdTokens.border(context)),
+                        ),
+                        child: Image.asset('assets/parsipol-logo.png',
+                            height: 42, fit: BoxFit.contain),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: PdTokens.accent(context).withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('${translate('Version')} $kParsiDeskVersion',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: PdTokens.accent(context))),
+                    ),
+                  ]),
+                ),
+              ),
+              section(
+                'Details',
+                Column(children: [
+                  info('Version', kParsiDeskVersion),
+                  info('Build Date', buildDate),
+                  info('ID', myId),
+                  info('Fingerprint', fingerprint),
+                ]),
+              ),
+              section(
+                "What's new in this version",
+                Column(children: [
+                  news(Icons.handyman_outlined,
+                      'Support tools for Windows computers'),
+                  news(Icons.support_agent_outlined,
+                      'Help requests with an optional note and screenshot'),
+                  news(Icons.history_rounded,
+                      'Ticket priority and support history for network admins'),
+                  news(Icons.wifi_tethering_rounded,
+                      'Automatic reconnect when the connection drops'),
+                  news(Icons.text_fields_rounded,
+                      'IRANSans font and a cleaner main screen'),
+                  news(Icons.tune_rounded, 'Redesigned settings and About'),
+                ]),
+              ),
+              Wrap(spacing: 10, runSpacing: 10, children: [
+                link(Icons.language_rounded, 'Website',
+                    'https://desk.parsipol.com'),
+                link(Icons.download_rounded, 'Downloads',
+                    'https://desk.parsipol.com/#download'),
+                link(Icons.business_rounded, 'Parsipol.com',
+                    'https://parsipol.com'),
+              ]),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(PdTokens.radiusSmall),
+                  border: Border.all(color: PdTokens.border(context)),
+                ),
+                child: SelectionArea(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(translate('license_notice'),
+                          style: TextStyle(fontSize: 12, color: muted)),
+                      Text(
+                        'Copyright © ${DateTime.now().toString().substring(0, 4)} Purslane Tech Pte. Ltd.\n$license',
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(
+                            fontSize: 9,
+                            height: 1.3,
+                            color: muted.withOpacity(0.7)),
+                      ).marginOnly(top: 10),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 //#endregion
 
 //#region components
@@ -2788,18 +2978,25 @@ Widget _Card(
                       translate(title),
                       textAlign: TextAlign.start,
                       style: TextStyle(
-                        fontSize: _kTitleFontSize,
+                        fontSize: isWindows ? 16 : _kTitleFontSize,
                         fontWeight: isWindows ? FontWeight.w600 : null,
                       ),
                     )),
                     ...?title_suffix
                   ],
-                ).marginOnly(left: _kContentHMargin, top: 10, bottom: 10),
-                ...children
-                    .map((e) => e.marginOnly(top: 4, right: _kContentHMargin)),
+                ).marginOnly(
+                    left: isWindows ? 18 : _kContentHMargin,
+                    right: isWindows ? 12 : 0,
+                    top: isWindows ? 14 : 10,
+                    bottom: isWindows ? 6 : 10),
+                ...children.map((e) => e.marginOnly(
+                    top: 4, right: isWindows ? 18 : _kContentHMargin)),
               ],
-            ).marginOnly(bottom: 10),
-          ).marginOnly(left: _kCardLeftMargin, top: 15),
+            ).marginOnly(bottom: isWindows ? 14 : 10),
+          ).marginOnly(
+              left: isWindows ? 24 : _kCardLeftMargin,
+              right: isWindows ? 24 : 0,
+              top: isWindows ? 16 : 15),
         ),
       ),
     ],
@@ -3498,3 +3695,28 @@ void changeSocks5Proxy() async {
 }
 
 //#endregion
+
+// Same API as GetX's WidgetMarginX. On Windows "left" means the start side and
+// "right" the end side, so the Persian (right-to-left) settings mirror
+// correctly. Other platforms keep the original left/right margins.
+extension _SettingsMarginX on Widget {
+  Widget marginSymmetric({double horizontal = 0.0, double vertical = 0.0}) =>
+      Container(
+          margin:
+              EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
+          child: this);
+
+  Widget marginOnly({
+    double left = 0.0,
+    double top = 0.0,
+    double right = 0.0,
+    double bottom = 0.0,
+  }) =>
+      Container(
+          margin: isWindows
+              ? EdgeInsetsDirectional.only(
+                  start: left, top: top, end: right, bottom: bottom)
+              : EdgeInsets.only(
+                  top: top, left: left, right: right, bottom: bottom),
+          child: this);
+}

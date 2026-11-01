@@ -172,7 +172,7 @@ const String kOptionEnablePortForwardMux = "enable-port-forward-mux";
 const String kOptionAllowAlwaysSoftwareRender = "allow-always-software-render";
 const String kOptionEnableCheckUpdate = "enable-check-update";
 // Version shown to users. Keep in sync with PARSIDESK_VERSION in src/common.rs.
-const String kParsiDeskVersion = "1.0.0";
+const String kParsiDeskVersion = "1.1.0";
 const String kOptionAllowAutoUpdate = "allow-auto-update";
 const String kOptionAllowRemoveWallpaper = "allow-remove-wallpaper";
 const String kOptionStopService = "stop-service";

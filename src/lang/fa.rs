@@ -925,5 +925,14 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Attempt {}", "تلاش {}"),
         ("Trying now...", "در حال تلاش..."),
         ("Next try in {} s", "تلاش بعدی تا {} ثانیه دیگر"),
+        ("Details", "جزئیات"),
+        ("What's new in this version", "تازه‌های این نسخه"),
+        ("Support tools for Windows computers", "ابزارهای پشتیبانی برای رایانه‌های ویندوزی"),
+        ("Help requests with an optional note and screenshot", "درخواست کمک همراه با یادداشت و تصویر صفحهٔ اختیاری"),
+        ("Ticket priority and support history for network admins", "اولویت‌بندی درخواست‌ها و تاریخچهٔ پشتیبانی برای مدیران شبکه"),
+        ("Automatic reconnect when the connection drops", "اتصال دوبارهٔ خودکار هنگام قطع ارتباط"),
+        ("IRANSans font and a cleaner main screen", "قلم ایران‌سنس و صفحهٔ اصلی مرتب‌تر"),
+        ("Redesigned settings and About", "طراحی تازهٔ تنظیمات و درباره"),
+        ("Downloads", "دانلودها"),
     ].iter().cloned().collect();
 }

@@ -385,7 +385,10 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
     if (!mounted) return;
     if (r.status == 401) {
       _timer?.cancel();
-      setState(() => _items = []);
+      setState(() {
+        _items = [];
+        _inProgress = [];
+      });
       return;
     }
     if (r.ok) {
@@ -420,7 +423,12 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
   Future<void> _signOut() async {
     _timer?.cancel();
     await HelpApi.logout();
-    if (mounted) setState(() => _items = []);
+    if (mounted) {
+      setState(() {
+        _items = [];
+        _inProgress = [];
+      });
+    }
   }
 
   Future<void> _connect(Map<String, dynamic> item) async {
