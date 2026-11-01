@@ -573,7 +573,10 @@ class _GeneralState extends State<_General> {
     final incomingOnly = bind.isIncomingOnly();
     final outgoingOnly = bind.isOutgoingOnly();
     final showAutoUpdate = (isWindows && bind.mainIsInstalled()) ||
-    (isMacOS && bind.mainIsInstalled() && bind.mainIsInstalledDaemon(prompt: false) && !bind.isCustomClient());
+        (isMacOS &&
+            bind.mainIsInstalled() &&
+            bind.mainIsInstalledDaemon(prompt: false) &&
+            !bind.isCustomClient());
     final children = <Widget>[
       if (!isWeb && !incomingOnly)
         _OptionCheckBox(context, 'Confirm before closing multiple tabs',
@@ -1193,15 +1196,16 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
               child: _OptionCheckBox(context, "Enable trusted devices",
                   kOptionEnableTrustedDevices,
                   optSetter: (key, value) async {
-                try {
-                  await mainSetBoolOption(key, value);
-                } catch (error) {
-                  showToast(error.toString());
-                }
-              },
-                  enabled: !locked, update: (v) {
-                setState(() {});
-              }),
+                    try {
+                      await mainSetBoolOption(key, value);
+                    } catch (error) {
+                      showToast(error.toString());
+                    }
+                  },
+                  enabled: !locked,
+                  update: (v) {
+                    setState(() {});
+                  }),
             ),
           ),
           if (mainGetBoolOptionSync(kOptionEnableTrustedDevices))
@@ -2649,7 +2653,23 @@ class _AboutState extends State<_About> {
               const SizedBox(
                 height: 8.0,
               ),
-              (isWindows ? const ParsiDeskHeader() : loadParsipolBrand()).marginSymmetric(vertical: 8.0),
+              (isWindows ? const ParsiDeskHeader() : loadParsipolBrand())
+                  .marginSymmetric(vertical: 8.0),
+              if (isWindows)
+                InkWell(
+                  onTap: () => launchUrlString('https://parsipol.com'),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(PdTokens.radiusSmall),
+                      border: Border.all(color: PdTokens.border(context)),
+                    ),
+                    child: Image.asset('assets/parsipol-logo.png',
+                        height: 46, fit: BoxFit.contain),
+                  ),
+                ).marginSymmetric(vertical: 6.0),
               SelectionArea(
                   child: Text('${translate('Version')}: $kParsiDeskVersion')
                       .marginSymmetric(vertical: 4.0)),
@@ -2680,34 +2700,30 @@ class _AboutState extends State<_About> {
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
               Container(
-                decoration: const BoxDecoration(color: Color(0xFF2563EB)),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  borderRadius: BorderRadius.circular(PdTokens.radiusSmall),
+                  border: Border.all(color: PdTokens.border(context)),
+                ),
                 padding:
-                    const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
                 child: SelectionArea(
-                    child: Row(
+                    child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Copyright © ${DateTime.now().toString().substring(0, 4)} Purslane Tech Pte. Ltd.\n$license',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          Text(
-                            translate('license_notice'),
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 12),
-                          ).marginOnly(top: 6, bottom: 6),
-                          Text(
-                            translate('Slogan_tip'),
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white),
-                          )
-                        ],
-                      ),
+                    Text(
+                      translate('license_notice'),
+                      style: TextStyle(
+                          fontSize: 12, color: PdTokens.muted(context)),
                     ),
+                    Text(
+                      'Copyright © ${DateTime.now().toString().substring(0, 4)} Purslane Tech Pte. Ltd.\n$license',
+                      textDirection: TextDirection.ltr,
+                      style: TextStyle(
+                          fontSize: 9,
+                          height: 1.3,
+                          color: PdTokens.muted(context).withOpacity(0.7)),
+                    ).marginOnly(top: 10),
                   ],
                 )),
               ).marginSymmetric(vertical: 4.0)
