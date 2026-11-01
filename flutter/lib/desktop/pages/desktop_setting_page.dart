@@ -1,3 +1,4 @@
+import 'package:flutter_hbb/desktop/widgets/parsidesk_brand.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -277,7 +278,9 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: isWindows
+          ? Theme.of(context).scaffoldBackgroundColor
+          : Theme.of(context).colorScheme.background,
       body: _buildBlock(
         children: <Widget>[
           SizedBox(
@@ -292,7 +295,9 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           const VerticalDivider(width: 1),
           Expanded(
             child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: isWindows
+                  ? PdTokens.surface(context)
+                  : Theme.of(context).scaffoldBackgroundColor,
               child: PageView(
                 controller: controller,
                 physics: NeverScrollableScrollPhysics(),
@@ -352,9 +357,52 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     );
   }
 
+  Widget _winListItem(_TabInfo tab, bool selected) {
+    final accent = PdTokens.accent(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(PdTokens.radiusSmall),
+        onTap: () {
+          if (selectedTab.value != tab.key) {
+            int index = DesktopSettingPage.tabKeys.indexOf(tab.key);
+            if (index == -1) {
+              return;
+            }
+            controller.jumpToPage(index);
+          }
+          selectedTab.value = tab.key;
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          height: 42,
+          decoration: BoxDecoration(
+            color: selected ? accent.withOpacity(0.12) : Colors.transparent,
+            borderRadius: BorderRadius.circular(PdTokens.radiusSmall),
+          ),
+          child: Row(children: [
+            Icon(
+              selected ? tab.selected : tab.unselected,
+              color: selected ? accent : PdTokens.muted(context),
+              size: 20,
+            ).marginOnly(left: 14, right: 12),
+            Text(
+              translate(tab.label),
+              style: TextStyle(
+                  color: selected ? accent : null,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: _kContentFontSize),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _listItem({required _TabInfo tab}) {
     return Obx(() {
       bool selected = tab.key == selectedTab.value;
+      if (isWindows) return _winListItem(tab, selected);
       return SizedBox(
         width: _kTabWidth,
         height: _kTabHeight,
@@ -2601,7 +2649,7 @@ class _AboutState extends State<_About> {
               const SizedBox(
                 height: 8.0,
               ),
-              loadParsipolBrand().marginSymmetric(vertical: 8.0),
+              (isWindows ? const ParsiDeskHeader() : loadParsipolBrand()).marginSymmetric(vertical: 8.0),
               SelectionArea(
                   child: Text('${translate('Version')}: $kParsiDeskVersion')
                       .marginSymmetric(vertical: 4.0)),
@@ -2686,6 +2734,15 @@ Widget _Card(
         child: SizedBox(
           width: _kCardFixedWidth,
           child: Card(
+            elevation: isWindows ? 0 : null,
+            shape: isWindows
+                ? RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(PdTokens.radius),
+                    side: BorderSide(
+                        color: (MyTheme.currentThemeMode() == ThemeMode.dark)
+                            ? const Color(0xFF262C38)
+                            : const Color(0xFFE5E9F0)))
+                : null,
             child: Column(
               children: [
                 Row(
@@ -2694,8 +2751,9 @@ Widget _Card(
                         child: Text(
                       translate(title),
                       textAlign: TextAlign.start,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: _kTitleFontSize,
+                        fontWeight: isWindows ? FontWeight.w600 : null,
                       ),
                     )),
                     ...?title_suffix

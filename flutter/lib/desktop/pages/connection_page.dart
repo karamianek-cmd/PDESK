@@ -1,5 +1,6 @@
 // main window right pane
 
+import 'package:flutter_hbb/desktop/widgets/parsidesk_brand.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -344,11 +345,19 @@ class _ConnectionPageState extends State<ConnectionPage>
   /// Search for a peer.
   Widget _buildRemoteIDTextField(BuildContext context) {
     var w = Container(
-      width: 320 + 20 * 2,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
-      decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(13)),
-          border: Border.all(color: Theme.of(context).colorScheme.background)),
+      width: isWindows ? 400 : 320 + 20 * 2,
+      padding: isWindows
+          ? const EdgeInsets.fromLTRB(24, 26, 24, 24)
+          : const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      decoration: isWindows
+          ? BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: PdTokens.border(context)))
+          : BoxDecoration(
+              borderRadius: const BorderRadius.all(Radius.circular(13)),
+              border:
+                  Border.all(color: Theme.of(context).colorScheme.background)),
       child: Ink(
         child: Column(
           children: [
@@ -419,11 +428,14 @@ class _ConnectionPageState extends State<ConnectionPage>
                           enableSuggestions: false,
                           keyboardType: TextInputType.visiblePassword,
                           focusNode: fieldFocusNode,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Vazirmatn',
-                            fontSize: 22,
+                            fontSize: isWindows ? 26 : 22,
                             height: 1.4,
+                            letterSpacing: isWindows ? 1 : null,
                           ),
+                          textDirection:
+                              isWindows ? TextDirection.ltr : null,
                           maxLines: 1,
                           cursorColor:
                               Theme.of(context).textTheme.titleLarge?.color,
@@ -519,8 +531,17 @@ class _ConnectionPageState extends State<ConnectionPage>
               padding: const EdgeInsets.only(top: 13.0),
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                 SizedBox(
-                  height: 28.0,
+                  height: isWindows ? 42.0 : 28.0,
+                  width: isWindows ? 150.0 : null,
                   child: ElevatedButton(
+                    style: isWindows
+                        ? ElevatedButton.styleFrom(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11)),
+                            textStyle: const TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w600))
+                        : null,
                     onPressed: () {
                       onConnect();
                     },
@@ -529,8 +550,8 @@ class _ConnectionPageState extends State<ConnectionPage>
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  height: 28.0,
-                  width: 28.0,
+                  height: isWindows ? 42.0 : 28.0,
+                  width: isWindows ? 42.0 : 28.0,
                   decoration: BoxDecoration(
                     border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(8),

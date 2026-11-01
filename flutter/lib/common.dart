@@ -374,7 +374,7 @@ class MyTheme {
     fontFamily: 'Vazirmatn',
     brightness: Brightness.light,
     hoverColor: Color.fromARGB(255, 224, 224, 224),
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: isWindows ? Color(0xFFF6F7F9) : Colors.white,
     dialogBackgroundColor: Colors.white,
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
@@ -382,22 +382,33 @@ class MyTheme {
     dialogTheme: DialogTheme(
       elevation: 15,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.0),
+        borderRadius: BorderRadius.circular(isWindows ? 14.0 : 18.0),
         side: BorderSide(
           width: 1,
-          color: grayBg,
+          color: isWindows ? border : grayBg,
         ),
       ),
     ),
     scrollbarTheme: scrollbarTheme,
     inputDecorationTheme: isDesktop
         ? InputDecorationTheme(
-            fillColor: grayBg,
+            fillColor: isWindows ? Colors.white : grayBg,
             filled: true,
             isDense: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
+              borderSide: isWindows ? BorderSide(color: border) : BorderSide(),
             ),
+            enabledBorder: isWindows
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: border))
+                : null,
+            focusedBorder: isWindows
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent, width: 1.6))
+                : null,
           )
         : null,
     textTheme: const TextTheme(
@@ -407,7 +418,7 @@ class MyTheme {
         bodyMedium:
             TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
         labelLarge: TextStyle(fontSize: 16.0, color: MyTheme.accent80)),
-    cardColor: grayBg,
+    cardColor: isWindows ? Colors.white : grayBg,
     hintColor: Color(0xFFAAAAAA),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
@@ -473,30 +484,42 @@ class MyTheme {
     fontFamily: 'Vazirmatn',
     brightness: Brightness.dark,
     hoverColor: Color.fromARGB(255, 45, 46, 53),
-    scaffoldBackgroundColor: Color(0xFF18191E),
-    dialogBackgroundColor: Color(0xFF18191E),
+    scaffoldBackgroundColor: isWindows ? Color(0xFF0F1218) : Color(0xFF18191E),
+    dialogBackgroundColor: isWindows ? Color(0xFF171B23) : Color(0xFF18191E),
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
     ),
     dialogTheme: DialogTheme(
       elevation: 15,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.0),
+        borderRadius: BorderRadius.circular(isWindows ? 14.0 : 18.0),
         side: BorderSide(
           width: 1,
-          color: Color(0xFF24252B),
+          color: isWindows ? Color(0xFF262C38) : Color(0xFF24252B),
         ),
       ),
     ),
     scrollbarTheme: scrollbarThemeDark,
     inputDecorationTheme: (isDesktop || isWebDesktop)
         ? InputDecorationTheme(
-            fillColor: Color(0xFF24252B),
+            fillColor: isWindows ? Color(0xFF171B23) : Color(0xFF24252B),
             filled: true,
             isDense: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  isWindows ? BorderSide(color: Color(0xFF262C38)) : BorderSide(),
             ),
+            enabledBorder: isWindows
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Color(0xFF262C38)))
+                : null,
+            focusedBorder: isWindows
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Color(0xFF5B8DEF), width: 1.6))
+                : null,
           )
         : null,
     textTheme: const TextTheme(
@@ -510,7 +533,7 @@ class MyTheme {
         color: accent80,
       ),
     ),
-    cardColor: Color(0xFF24252B),
+    cardColor: isWindows ? Color(0xFF171B23) : Color(0xFF24252B),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
       labelColor: Colors.white70,

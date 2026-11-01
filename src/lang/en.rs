@@ -294,5 +294,12 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Made by Parsipol", "Made by Parsipol"),
         ("Usage guide", "Usage guide"),
         ("license_notice", "ParsiDesk is free software released under the AGPL-3.0 license. Contact Parsipol (Parsipol.com) to receive the source code."),
+        ("About RustDesk", "About ParsiDesk"),
+        ("Keep RustDesk background service", "Keep ParsiDesk background service"),
+        ("RustDesk cannot reach the desktop session on the remote device, check that a desktop session is running and that RustDesk can use it", "ParsiDesk cannot reach the desktop session on the remote device, check that a desktop session is running and that ParsiDesk can use it"),
+        ("RustDesk could not load a GStreamer component needed for screen capture ({})", "ParsiDesk could not load a GStreamer component needed for screen capture ({})"),
+        ("RustDesk could not obtain a usable screen from the XDG Desktop Portal, the PipeWire library may be too old", "ParsiDesk could not obtain a usable screen from the XDG Desktop Portal, the PipeWire library may be too old"),
+        ("RustDesk storage", "ParsiDesk storage"),
+        ("Show RustDesk", "Show ParsiDesk"),
     ].iter().cloned().collect();
 }
