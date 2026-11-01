@@ -615,10 +615,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
-                ],
+                colors: isWindows
+                    ? [Color(0xFF2563EB), Color(0xFF1D4ED8)]
+                    : [
+                        Color.fromARGB(255, 226, 66, 188),
+                        Color.fromARGB(255, 244, 114, 124),
+                      ],
               )),
               padding: EdgeInsets.all(20),
               child: Column(
