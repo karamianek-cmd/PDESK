@@ -915,5 +915,15 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Last edited by", "آخرین ویرایش توسط"),
         ("Later", "بعداً"),
         ("Save note", "ذخیرهٔ یادداشت"),
+        ("Reconnected", "اتصال دوباره برقرار شد"),
+        ("Reconnecting...", "در حال اتصال دوباره..."),
+        ("Close session", "بستن جلسه"),
+        ("Reconnect now", "اتصال دوباره همین حالا"),
+        ("The connection to {} dropped.", "اتصال به {} قطع شد."),
+        ("ParsiDesk keeps trying to reconnect. The session resumes by itself.", "پارسی‌دسک پیوسته برای اتصال دوباره تلاش می‌کند و جلسه خودبه‌خود ادامه پیدا می‌کند."),
+        ("Disconnected for", "مدت قطعی"),
+        ("Attempt {}", "تلاش {}"),
+        ("Trying now...", "در حال تلاش..."),
+        ("Next try in {} s", "تلاش بعدی تا {} ثانیه دیگر"),
     ].iter().cloned().collect();
 }

@@ -28,6 +28,7 @@ import 'package:flutter_hbb/models/desktop_render_texture.dart';
 import 'package:flutter_hbb/models/terminal_model.dart';
 import 'package:flutter_hbb/common/shared_state.dart';
 import 'package:flutter_hbb/desktop/widgets/support_tools.dart';
+import 'package:flutter_hbb/models/auto_reconnect.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/http_service.dart' as http;
 import 'package:tuple/tuple.dart';
@@ -125,6 +126,7 @@ class FfiModel with ChangeNotifier {
   DateTime? _offlineReconnectStartTime;
   bool _androidDocumentPickerActive = false;
   bool _androidDocumentPickerInterruptedConnection = false;
+  late final autoReconnect = AutoReconnect(this);
   bool _viewOnly = false;
   bool _showMyCursor = false;
   WeakReference<FFI> parent;
@@ -917,6 +919,9 @@ class FfiModel with ChangeNotifier {
       parent.target?.inputModel.setRelativeMouseMode(false);
     }
 
+    // Windows: a dropped session retries behind a "Reconnecting..." card.
+    if (autoReconnect.onMsgBox(type ?? '', title ?? '', text ?? '')) return;
+
     if (type == 're-input-password') {
       wrongPasswordDialog(sessionId, dialogManager, type, title, text);
     } else if (type == 'input-2fa') {
@@ -1126,6 +1131,16 @@ class FfiModel with ChangeNotifier {
     dialogManager.dismissAll();
     dialogManager.showLoading(translate('Connecting...'),
         onCancel: closeConnection);
+  }
+
+  /// Like [reconnect] but without the "Connecting..." dialog; auto-reconnect
+  /// keeps its own card on screen.
+  void reconnectQuietly() {
+    _timer?.cancel();
+    parent.target?.inputModel.setRelativeMouseMode(false);
+    _cancelPendingMonitorRestore();
+    bind.sessionReconnect(sessionId: sessionId, forceRelay: false);
+    clearPermissions();
   }
 
   Future<void> showRelayHintDialog(
@@ -1454,6 +1469,7 @@ class FfiModel with ChangeNotifier {
             () => parent.target?._applyPendingMonitorRestore());
       }
       if (displays.isNotEmpty) {
+        autoReconnect.onConnected();
         _reconnects = 1;
         _offlineReconnectStartTime = null;
         resetRestartReconnectState();
