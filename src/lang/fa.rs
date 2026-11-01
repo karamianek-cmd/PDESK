@@ -877,5 +877,13 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Disk", "دیسک"),
         ("Gateway", "دروازه (Gateway)"),
         ("Windows", "ویندوز"),
+        ("Describe the problem (optional)", "مشکل را توضیح دهید (اختیاری)"),
+        ("Screenshot (optional)", "تصویر صفحه (اختیاری)"),
+        ("Capture my screen", "گرفتن تصویر از صفحهٔ من"),
+        ("Choose an image", "انتخاب تصویر"),
+        ("Send request", "ارسال درخواست"),
+        ("The screenshot could not be taken", "گرفتن تصویر صفحه ممکن نشد"),
+        ("The screenshot could not be sent", "ارسال تصویر صفحه ممکن نشد"),
+        ("Screenshot", "تصویر صفحه"),
     ].iter().cloned().collect();
 }

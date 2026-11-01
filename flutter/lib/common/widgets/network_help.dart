@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/desktop/widgets/help_request_dialog.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:http/http.dart' as http;
 
@@ -51,9 +53,22 @@ class HelpApi {
     }
   }
 
-  static Future<HelpResult> request(String id, String name, String password) =>
-      _call('POST', '/request',
-          body: {'id': id, 'name': name, 'password': password});
+  // note: null keeps the note stored on the server (refreshes and older apps send none).
+  static Future<HelpResult> request(String id, String name, String password,
+          {String? note}) =>
+      _call('POST', '/request', body: {
+        'id': id,
+        'name': name,
+        'password': password,
+        if (note != null) 'note': note,
+      });
+
+  static Future<HelpResult> attach(String id, String password, String shot) =>
+      _call('POST', '/attach',
+          body: {'id': id, 'password': password, 'shot': shot});
+
+  static Future<HelpResult> shot(String id) =>
+      _call('POST', '/shot', body: {'id': id}, auth: true);
 
   static Future<HelpResult> cancel(String id, String password) =>
       _call('POST', '/cancel', body: {'id': id, 'password': password});
@@ -164,11 +179,26 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
       showToast(translate('Enable one-time password first'));
       return;
     }
-    final name = await _askName();
-    if (name == null || !mounted) return;
+    // Windows asks for an optional note and screenshot as well.
+    HelpRequestInput? input;
+    if (isWindows) {
+      final saved = bind.mainGetLocalOption(key: _kHelpNameOption);
+      input = await showHelpRequestDialog(
+          context, saved.isEmpty ? _defaultName() : saved);
+    } else {
+      final name = await _askName();
+      if (name != null) input = HelpRequestInput(name, '', null);
+    }
+    if (input == null || !mounted) return;
+    final name = input.name;
     await bind.mainSetLocalOption(key: _kHelpNameOption, value: name);
     setState(() => _busy = true);
-    final ok = await _send(name);
+    final ok = await _send(name, note: isWindows ? input.note : null);
+    if (ok && input.shot != null) {
+      final r =
+          await HelpApi.attach(_lastId, _lastPw, base64Encode(input.shot!));
+      if (!r.ok) showToast(translate('The screenshot could not be sent'));
+    }
     if (!mounted) return;
     setState(() => _busy = false);
     if (!ok) return;
@@ -181,10 +211,10 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
     _timer = Timer.periodic(_refresh, (_) => _tick());
   }
 
-  Future<bool> _send(String name) async {
+  Future<bool> _send(String name, {String? note}) async {
     _lastId = _id;
     _lastPw = _password;
-    final r = await HelpApi.request(_lastId, name, _lastPw);
+    final r = await HelpApi.request(_lastId, name, _lastPw, note: note);
     if (!r.ok) {
       showToast(translate('Cannot reach the server'));
       return false;
@@ -370,6 +400,41 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
     setState(() => _items.removeWhere((e) => e['id'] == item['id']));
     connect(context, r.data['id'] as String,
         password: r.data['password'] as String, isSharedPassword: false);
+  }
+
+  Future<void> _showShot(Map<String, dynamic> item) async {
+    final r = await HelpApi.shot(item['id'] as String);
+    if (!mounted) return;
+    Uint8List? bytes;
+    try {
+      if (r.ok) bytes = base64Decode(r.data['image'] as String);
+    } catch (_) {}
+    if (bytes == null) {
+      showToast(translate('Failed'));
+      return;
+    }
+    final name = (item['name'] ?? '') as String;
+    final accept = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(name.isEmpty ? item['id'] as String : name),
+        content: SizedBox(
+          width: 900,
+          height: 560,
+          child: InteractiveViewer(
+              maxScale: 5, child: Image.memory(bytes!, fit: BoxFit.contain)),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(translate('Close'))),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(translate('Accept'))),
+        ],
+      ),
+    );
+    if (accept == true && mounted) _connect(item);
   }
 
   Future<void> _rename(Map<String, dynamic> item) async {
@@ -559,15 +624,33 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
                                         textDirection: TextDirection.ltr,
                                         style: TextStyle(
                                             fontSize: 12, color: muted)),
+                                    if ((it['note'] ?? '') != '')
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Text(it['note'] as String,
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                            style:
+                                                const TextStyle(fontSize: 13)),
+                                      ),
                                   ],
                                 ),
                               ),
+                              if (it['has_shot'] == true)
+                                IconButton(
+                                    tooltip: translate('Screenshot'),
+                                    onPressed: () => _showShot(it),
+                                    icon: const Icon(Icons.image_outlined,
+                                        size: 20)),
                               IconButton(
                                   tooltip: translate('Rename'),
                                   onPressed: () => _rename(it),
                                   icon: const Icon(Icons.edit_outlined,
                                       size: 18)),
-                              Icon(Icons.chevron_right, color: muted),
+                              const SizedBox(width: 4),
+                              ElevatedButton(
+                                  onPressed: () => _connect(it),
+                                  child: Text(translate('Accept'))),
                             ],
                           ),
                         ),
