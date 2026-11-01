@@ -1,3 +1,4 @@
+import 'package:flutter_hbb/common/widgets/network_help.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -215,6 +216,7 @@ class _ServerPageState extends State<ServerPage> {
                             ? ServerInfo()
                             : ServiceNotRunningNotification(),
                         const ConnectionManager(),
+                        const HelpRequestCard(),
                         const PermissionChecker(),
                         SizedBox.fromSize(size: const Size(0, 15.0)),
                       ],

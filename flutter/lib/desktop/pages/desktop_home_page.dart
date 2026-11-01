@@ -24,6 +24,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 import '../widgets/button.dart';
 import '../widgets/parsidesk_brand.dart';
+import 'package:flutter_hbb/common/widgets/network_help.dart';
 import '../widgets/pardis_art.dart';
 
 class DesktopHomePage extends StatefulWidget {
@@ -115,6 +116,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       buildTip(context),
       if (!isOutgoingOnly) _winCard(buildIDBoard(context)),
       if (!isOutgoingOnly) _winCard(buildPasswordBoard(context)),
+      if (!isOutgoingOnly) const HelpRequestCard(),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),

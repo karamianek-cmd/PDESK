@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../common.dart';
 import '../../desktop/widgets/parsidesk_brand.dart';
+import '../../common/widgets/network_help.dart';
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/login.dart';
 import '../../consts.dart';
@@ -763,6 +764,16 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             ],
           ),
         SettingsSection(title: Text(translate("Settings")), tiles: [
+          SettingsTile(
+              title: Text(translate('Network admin')),
+              leading: Icon(Icons.support_agent),
+              onPressed: (context) {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => Scaffold(
+                        appBar:
+                            AppBar(title: Text(translate('Network admin'))),
+                        body: const NetworkAdminPanel())));
+              }),
           if (!disabledSettings && !_hideNetwork && !_hideServer)
             SettingsTile(
                 title: Text(translate('ID/Relay Server')),

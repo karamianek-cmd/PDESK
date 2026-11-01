@@ -1,4 +1,5 @@
 import 'package:flutter_hbb/desktop/widgets/parsidesk_brand.dart';
+import 'package:flutter_hbb/common/widgets/network_help.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -59,6 +60,7 @@ enum SettingsTabKey {
   display,
   account,
   printer,
+  networkAdmin,
   about,
 }
 
@@ -81,6 +83,7 @@ class DesktopSettingPage extends StatefulWidget {
         !bind.isDisableSettings() &&
         bind.mainGetBuildinOption(key: kOptionHideRemotePrinterSetting) != 'Y')
       SettingsTabKey.printer,
+    SettingsTabKey.networkAdmin,
     SettingsTabKey.about,
   ];
 
@@ -212,6 +215,10 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           settingTabs
               .add(_TabInfo(tab, 'Printer', Icons.print_outlined, Icons.print));
           break;
+        case SettingsTabKey.networkAdmin:
+          settingTabs.add(_TabInfo(tab, 'Network admin',
+              Icons.support_agent_outlined, Icons.support_agent));
+          break;
         case SettingsTabKey.about:
           settingTabs
               .add(_TabInfo(tab, 'About', Icons.info_outline, Icons.info));
@@ -242,6 +249,9 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           break;
         case SettingsTabKey.printer:
           children.add(const _Printer());
+          break;
+        case SettingsTabKey.networkAdmin:
+          children.add(const NetworkAdminPanel());
           break;
         case SettingsTabKey.about:
           children.add(const _About());
