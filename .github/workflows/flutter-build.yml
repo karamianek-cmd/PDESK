@@ -267,6 +267,13 @@ jobs:
         mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
 
         '
+    - name: Upload unsigned installer
+      if: env.UPLOAD_ARTIFACT == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: parsidesk-windows-installer-${{ matrix.job.arch }}
+        path: ./SignOutput/*.exe
+        if-no-files-found: error
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce
       with:
@@ -445,6 +452,13 @@ jobs:
       with:
         name: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
         path: ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
+    - name: Upload unsigned APK
+      if: env.UPLOAD_ARTIFACT == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: parsidesk-apk-${{ matrix.job.arch }}${{ matrix.job.suffix }}
+        path: signed-apk/*.apk
+        if-no-files-found: warn
   build-rustdesk-android-universal:
     needs:
     - build-rustdesk-android
@@ -545,3 +559,10 @@ jobs:
       with:
         name: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
         path: ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
+    - name: Upload unsigned APK
+      if: env.UPLOAD_ARTIFACT == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: parsidesk-apk-${{ matrix.job.arch }}${{ matrix.job.suffix }}
+        path: signed-apk/*.apk
+        if-no-files-found: warn
