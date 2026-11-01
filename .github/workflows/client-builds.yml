@@ -1,10 +1,13 @@
 ﻿name: Client builds (artifacts only)
 
+# Runs when .build-trigger is changed on this branch (edit/touch that file to rebuild).
 on:
   workflow_dispatch:
   push:
     branches:
       - client-builds
+    paths:
+      - .build-trigger
 
 permissions:
   contents: write
