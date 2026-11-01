@@ -1060,6 +1060,13 @@ pub fn apply_parsidesk_defaults() {
     ] {
         settings.entry(k.to_owned()).or_insert_with(|| v.to_owned());
     }
+    // The Parsipol server is the open-source ID/relay server: it has no HTTP API on port 21114.
+    // "register-device" = "N" stops the client from sending device info/heartbeats there
+    // (and from logging a failed request every minute).
+    config::BUILTIN_SETTINGS
+        .write()
+        .unwrap()
+        .insert("register-device".to_owned(), "N".to_owned());
 }
 
 pub fn check_software_update() {
