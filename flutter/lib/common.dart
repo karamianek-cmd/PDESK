@@ -374,7 +374,8 @@ class MyTheme {
     fontFamily: 'Vazirmatn',
     brightness: Brightness.light,
     hoverColor: Color.fromARGB(255, 224, 224, 224),
-    scaffoldBackgroundColor: isWindows ? Color(0xFFF6F7F9) : Colors.white,
+    scaffoldBackgroundColor:
+        (isWindows || isAndroid) ? Color(0xFFF6F7F9) : Colors.white,
     dialogBackgroundColor: Colors.white,
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
@@ -382,29 +383,32 @@ class MyTheme {
     dialogTheme: DialogTheme(
       elevation: 15,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isWindows ? 14.0 : 18.0),
+        borderRadius:
+            BorderRadius.circular((isWindows || isAndroid) ? 14.0 : 18.0),
         side: BorderSide(
           width: 1,
-          color: isWindows ? border : grayBg,
+          color: (isWindows || isAndroid) ? border : grayBg,
         ),
       ),
     ),
     scrollbarTheme: scrollbarTheme,
     inputDecorationTheme: isDesktop
         ? InputDecorationTheme(
-            fillColor: isWindows ? Colors.white : grayBg,
+            fillColor: (isWindows || isAndroid) ? Colors.white : grayBg,
             filled: true,
             isDense: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: isWindows ? BorderSide(color: border) : BorderSide(),
+              borderSide: (isWindows || isAndroid)
+                  ? BorderSide(color: border)
+                  : BorderSide(),
             ),
-            enabledBorder: isWindows
+            enabledBorder: (isWindows || isAndroid)
                 ? OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: border))
                 : null,
-            focusedBorder: isWindows
+            focusedBorder: (isWindows || isAndroid)
                 ? OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: accent, width: 1.6))
@@ -415,10 +419,9 @@ class MyTheme {
         titleLarge: TextStyle(fontSize: 19, color: Colors.black87),
         titleSmall: TextStyle(fontSize: 14, color: Colors.black87),
         bodySmall: TextStyle(fontSize: 12, color: Colors.black87, height: 1.5),
-        bodyMedium:
-            TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
+        bodyMedium: TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
         labelLarge: TextStyle(fontSize: 16.0, color: MyTheme.accent80)),
-    cardColor: isWindows ? Colors.white : grayBg,
+    cardColor: (isWindows || isAndroid) ? Colors.white : grayBg,
     hintColor: Color(0xFFAAAAAA),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
@@ -484,41 +487,49 @@ class MyTheme {
     fontFamily: 'Vazirmatn',
     brightness: Brightness.dark,
     hoverColor: Color.fromARGB(255, 45, 46, 53),
-    scaffoldBackgroundColor: isWindows ? Color(0xFF0F1218) : Color(0xFF18191E),
-    dialogBackgroundColor: isWindows ? Color(0xFF171B23) : Color(0xFF18191E),
+    scaffoldBackgroundColor:
+        (isWindows || isAndroid) ? Color(0xFF0F1218) : Color(0xFF18191E),
+    dialogBackgroundColor:
+        (isWindows || isAndroid) ? Color(0xFF171B23) : Color(0xFF18191E),
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
     ),
     dialogTheme: DialogTheme(
       elevation: 15,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isWindows ? 14.0 : 18.0),
+        borderRadius:
+            BorderRadius.circular((isWindows || isAndroid) ? 14.0 : 18.0),
         side: BorderSide(
           width: 1,
-          color: isWindows ? Color(0xFF262C38) : Color(0xFF24252B),
+          color:
+              (isWindows || isAndroid) ? Color(0xFF262C38) : Color(0xFF24252B),
         ),
       ),
     ),
     scrollbarTheme: scrollbarThemeDark,
     inputDecorationTheme: (isDesktop || isWebDesktop)
         ? InputDecorationTheme(
-            fillColor: isWindows ? Color(0xFF171B23) : Color(0xFF24252B),
+            fillColor: (isWindows || isAndroid)
+                ? Color(0xFF171B23)
+                : Color(0xFF24252B),
             filled: true,
             isDense: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  isWindows ? BorderSide(color: Color(0xFF262C38)) : BorderSide(),
+              borderSide: (isWindows || isAndroid)
+                  ? BorderSide(color: Color(0xFF262C38))
+                  : BorderSide(),
             ),
-            enabledBorder: isWindows
+            enabledBorder: (isWindows || isAndroid)
                 ? OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: Color(0xFF262C38)))
                 : null,
-            focusedBorder: isWindows
+            focusedBorder: (isWindows || isAndroid)
                 ? OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Color(0xFF5B8DEF), width: 1.6))
+                    borderSide:
+                        BorderSide(color: Color(0xFF5B8DEF), width: 1.6))
                 : null,
           )
         : null,
@@ -533,7 +544,7 @@ class MyTheme {
         color: accent80,
       ),
     ),
-    cardColor: isWindows ? Color(0xFF171B23) : Color(0xFF24252B),
+    cardColor: (isWindows || isAndroid) ? Color(0xFF171B23) : Color(0xFF24252B),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
       labelColor: Colors.white70,
@@ -3858,7 +3869,8 @@ class _ParsipolBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7);
+    final muted =
+        Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -3867,8 +3879,12 @@ class _ParsipolBrand extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset('assets/parsipol-logo.png',
-                  height: 30, fit: BoxFit.contain),
+              Image.asset(
+                  Theme.of(context).brightness == Brightness.dark
+                      ? 'assets/parsipol-symbol-dark.png'
+                      : 'assets/parsipol-symbol.png',
+                  height: 30,
+                  fit: BoxFit.contain),
               Text(translate('Made by Parsipol'),
                   style: TextStyle(fontSize: 11, color: muted)),
             ],
@@ -3902,7 +3918,7 @@ Widget loadIcon(double size) {
 
 var imcomingOnlyHomeSize = Size(280, 300);
 Size getIncomingOnlyHomeSize() {
-  final magicWidth = isWindows ? 11.0 : 2.0;
+  final magicWidth = (isWindows || isAndroid) ? 11.0 : 2.0;
   final magicHeight = 10.0;
   return imcomingOnlyHomeSize +
       Offset(magicWidth, kDesktopRemoteTabBarHeight + magicHeight);

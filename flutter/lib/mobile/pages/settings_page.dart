@@ -12,12 +12,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../common.dart';
+import '../../desktop/widgets/parsidesk_brand.dart';
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/login.dart';
 import '../../consts.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
-import '../widgets/deploy_dialog.dart';
 import '../../models/shortcut_model.dart';
 import '../widgets/dialog.dart';
 import 'home_page.dart';
@@ -299,10 +299,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             alignment: Alignment.center,
             child: loadPowered(context),
           ),
-        Align(
-          alignment: Alignment.center,
-          child: loadLogo(),
-        )
+        const ParsiDeskHeader(),
       ],
     ));
     final List<AbstractSettingsTile> enhancementsTiles = [];
@@ -783,13 +780,6 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 onPressed: (context) {
                   changeSocks5Proxy();
                 }),
-          if (isAndroid && !bind.isOutgoingOnly())
-            SettingsTile(
-                title: Text(translate('Deploy')),
-                leading: Icon(Icons.cloud_upload),
-                onPressed: (context) {
-                  showDeployDialog();
-                }),
           if (!disabledSettings && !_hideNetwork && !_hideWebSocket)
             SettingsTile.switchTile(
               title: Text(translate('Use WebSocket')),
@@ -1209,7 +1199,7 @@ void showAbout(OverlayDialogManager dialogManager) {
     return CustomAlertDialog(
       title: Text(translate('About RustDesk')),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
-        loadParsipolBrand(),
+        const ParsiDeskHeader(),
         Text('${translate('Version')}: $kParsiDeskVersion'),
         const Text('ParsiDesk ساخته‌شده توسط پارسیپل (Parsipol.com)'),
         SizedBox(

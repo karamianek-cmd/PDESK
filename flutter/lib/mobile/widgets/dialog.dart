@@ -232,6 +232,8 @@ TextFormField serverSettingsTextFormField({
 }) {
   return TextFormField(
     controller: controller,
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.left,
     decoration: InputDecoration(
       labelText: showLabelText ? label : null,
       errorText: errorMsg.isEmpty ? null : errorMsg,

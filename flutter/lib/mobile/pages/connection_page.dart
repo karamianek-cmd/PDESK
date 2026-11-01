@@ -17,6 +17,7 @@ import '../../consts.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
 import 'home_page.dart';
+import '../../desktop/widgets/parsidesk_brand.dart';
 
 /// Connection page for connecting to a remote peer.
 class ConnectionPage extends StatefulWidget implements PageShape {
@@ -86,7 +87,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
             delegate: SliverChildListDelegate([
           if (!bind.isCustomClient() && !isIOS)
             Obx(() => _buildUpdateUI(stateGlobal.updateUrl.value)),
-          Center(child: loadParsipolBrand()).marginOnly(top: 6, bottom: 4),
+          const ParsiDeskHeader(),
           _buildRemoteIDTextField(),
         ])),
         SliverFillRemaining(
@@ -231,6 +232,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         onChanged: (String text) {
                           _idController.id = text;
                         },
+                        textDirection: TextDirection.ltr,
                         style: const TextStyle(
                           fontFamily: 'Vazirmatn',
                           fontWeight: FontWeight.bold,
