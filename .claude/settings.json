@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./target/**)",
+      "Read(./**/target/**)",
+      "Read(./flutter/build/**)",
+      "Read(./flutter/.dart_tool/**)",
+      "Read(./flutter/lib/generated_bridge.dart)",
+      "Read(./flutter/lib/generated_bridge.freezed.dart)",
+      "Read(./src/bridge_generated.rs)",
+      "Read(./src/bridge_generated.io.rs)",
+      "Read(./Cargo.lock)",
+      "Read(./flatpak/.flatpak-builder/**)",
+      "Read(./appimage/AppDir/**)",
+      "Read(./vcpkg_installed/**)"
+    ]
+  }
+}
