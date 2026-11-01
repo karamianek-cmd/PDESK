@@ -915,6 +915,8 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
   final p0 = TextEditingController(text: "");
   final p1 = TextEditingController(text: "");
   var errMsg0 = "";
+  var hide0 = true;
+  var hide1 = true;
   var errMsg1 = "";
   final localPasswordSet =
       (await bind.mainGetCommon(key: "local-permanent-password-set")) == "true";
@@ -1003,9 +1005,14 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
                   child: TextField(
                     textDirection: TextDirection.ltr,
                     textAlign: TextAlign.left,
-                    obscureText: true,
+                    obscureText: hide0,
                     decoration: InputDecoration(
                         labelText: translate('Password'),
+                        suffixIcon: IconButton(
+                            icon: Icon(
+                                hide0 ? Icons.visibility_off : Icons.visibility,
+                                size: 20),
+                            onPressed: () => setState(() => hide0 = !hide0)),
                         errorText: errMsg0.isNotEmpty ? errMsg0 : null),
                     controller: p0,
                     autofocus: true,
@@ -1035,9 +1042,14 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
                   child: TextField(
                     textDirection: TextDirection.ltr,
                     textAlign: TextAlign.left,
-                    obscureText: true,
+                    obscureText: hide1,
                     decoration: InputDecoration(
                         labelText: translate('Confirmation'),
+                        suffixIcon: IconButton(
+                            icon: Icon(
+                                hide1 ? Icons.visibility_off : Icons.visibility,
+                                size: 20),
+                            onPressed: () => setState(() => hide1 = !hide1)),
                         errorText: errMsg1.isNotEmpty ? errMsg1 : null),
                     controller: p1,
                     onChanged: (value) {

@@ -489,7 +489,7 @@ Future<String> changeAutoDisconnectTimeout(String old) async {
   return controller.text;
 }
 
-class DialogTextField extends StatelessWidget {
+class DialogTextField extends StatefulWidget {
   final String title;
   final String? hintText;
   final bool obscureText;
@@ -525,7 +525,33 @@ class DialogTextField extends StatelessWidget {
       : super(key: key);
 
   @override
+  State<DialogTextField> createState() => _DialogTextFieldState();
+}
+
+class _DialogTextFieldState extends State<DialogTextField> {
+  bool _hidden = true;
+
+  @override
   Widget build(BuildContext context) {
+    final title = widget.title,
+        hintText = widget.hintText,
+        obscureText = widget.obscureText,
+        errorText = widget.errorText,
+        helperText = widget.helperText,
+        prefixIcon = widget.prefixIcon,
+        controller = widget.controller,
+        focusNode = widget.focusNode,
+        keyboardType = widget.keyboardType,
+        inputFormatters = widget.inputFormatters,
+        maxLength = widget.maxLength;
+    final suffixIcon = widget.suffixIcon ??
+        (obscureText
+            ? IconButton(
+                icon: Icon(_hidden ? Icons.visibility_off : Icons.visibility,
+                    size: 20),
+                onPressed: () => setState(() => _hidden = !_hidden),
+              )
+            : null);
     return Row(
       children: [
         Expanded(
@@ -545,7 +571,7 @@ class DialogTextField extends StatelessWidget {
                 autofocus: true,
                 textDirection: TextDirection.ltr,
                 textAlign: TextAlign.left,
-                obscureText: obscureText,
+                obscureText: obscureText && _hidden,
                 keyboardType: keyboardType,
                 inputFormatters: inputFormatters,
                 maxLength: maxLength,
