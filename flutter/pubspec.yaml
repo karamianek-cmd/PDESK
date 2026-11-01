@@ -169,6 +169,11 @@ flutter:
           weight: 600
         - asset: assets/fonts/Vazirmatn/Vazirmatn-Bold.ttf
           weight: 700
+    # Windows default font (licensed by Parsipol).
+    - family: IRANSans
+      fonts:
+        - asset: assets/fonts/IRANSans/IRANSans-Regular.ttf
+          weight: 400
     - family: GestureIcons
       fonts:
         - asset: assets/gestures.ttf

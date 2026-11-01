@@ -114,8 +114,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ).marginOnly(top: 6, bottom: 2),
       ],
       buildTip(context),
-      if (!isOutgoingOnly) _winCard(buildIDBoard(context)),
-      if (!isOutgoingOnly) _winCard(buildPasswordBoard(context)),
+      if (!isOutgoingOnly && isWindows) _buildWinDeviceCard(context),
+      if (!isOutgoingOnly && !isWindows) buildIDBoard(context),
+      if (!isOutgoingOnly && !isWindows) buildPasswordBoard(context),
       if (!isOutgoingOnly) const HelpRequestCard(),
       FutureBuilder<Widget>(
         future: Future.value(
@@ -136,7 +137,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         },
       ),
     ];
-    if (isWindows) children.add(const SizedBox(height: 36));
+    if (isWindows) children.add(const SizedBox(height: 24));
     if (isIncomingOnly) {
       children.addAll([
         Divider(),
@@ -155,7 +156,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : (isWindows ? 264.0 : 200.0),
+        width: isIncomingOnly ? 280.0 : (isWindows ? 296.0 : 200.0),
         color: isWindows
             ? (MyTheme.isPardis
                 ? Colors.transparent
@@ -424,13 +425,96 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
-  Widget _winCard(Widget child) => isWindows ? PdCard(child: child) : child;
+  // Windows: this device's ID and password in one calm card.
+  Widget _buildWinDeviceCard(BuildContext context) {
+    final muted = PdTokens.muted(context);
+    final label = TextStyle(fontSize: 12, color: muted);
+    Widget value(TextEditingController c, double size, FontWeight weight) =>
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: c,
+          builder: (_, v, __) => Text(v.text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textDirection: TextDirection.ltr,
+              style: TextStyle(
+                  fontSize: size, fontWeight: weight, letterSpacing: 0.6)),
+        );
+    void copy(String text) {
+      Clipboard.setData(ClipboardData(text: text));
+      showToast(translate("Copied"));
+    }
+
+    return ChangeNotifierProvider.value(
+      value: gFFI.serverModel,
+      child: Consumer<ServerModel>(builder: (context, model, _) {
+        final showOneTime = model.approveMode != 'click' &&
+            model.verificationMethod != kUsePermanentPassword;
+        return PdCard(
+          padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+          margin: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Expanded(child: Text(translate("ID"), style: label)),
+                _PdIconButton(
+                    icon: Icons.more_horiz_rounded,
+                    tooltip: 'Settings',
+                    onPressed: DesktopTabPage.onAddSetting),
+              ]),
+              Row(children: [
+                Expanded(
+                  child: GestureDetector(
+                    onDoubleTap: () => copy(model.serverId.text),
+                    child: value(model.serverId, 24, FontWeight.w600),
+                  ),
+                ),
+                _PdIconButton(
+                    icon: Icons.copy_rounded,
+                    tooltip: 'Copy',
+                    onPressed: () => copy(model.serverId.text)),
+              ]),
+              Divider(height: 22, color: PdTokens.border(context)),
+              Text(translate("One-time Password"), style: label),
+              const SizedBox(height: 2),
+              Row(children: [
+                Expanded(
+                  child: GestureDetector(
+                    onDoubleTap: showOneTime
+                        ? () => copy(model.serverPasswd.text)
+                        : null,
+                    child: value(model.serverPasswd, 18, FontWeight.w500),
+                  ),
+                ),
+                if (showOneTime)
+                  _PdIconButton(
+                      icon: Icons.copy_rounded,
+                      tooltip: 'Copy',
+                      onPressed: () => copy(model.serverPasswd.text)),
+                if (showOneTime)
+                  _PdIconButton(
+                      icon: Icons.refresh_rounded,
+                      tooltip: 'Refresh Password',
+                      onPressed: () => bind.mainUpdateTemporaryPassword()),
+                if (!bind.isDisableSettings())
+                  _PdIconButton(
+                      icon: Icons.edit_outlined,
+                      tooltip: 'Change Password',
+                      onPressed: () => DesktopSettingPage.switch2page(
+                          SettingsTabKey.safety)),
+              ]),
+            ],
+          ),
+        );
+      }),
+    );
+  }
 
   buildTip(BuildContext context) {
     final isOutgoingOnly = bind.isOutgoingOnly();
     return Padding(
       padding: isWindows
-          ? const EdgeInsets.only(left: 20.0, right: 16, top: 6.0, bottom: 5)
+          ? const EdgeInsets.fromLTRB(18, 8, 18, 6)
           : const EdgeInsets.only(left: 20.0, right: 16, top: 16.0, bottom: 5),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
@@ -440,16 +524,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             children: [
               if (!isOutgoingOnly)
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: isWindows
+                      ? AlignmentDirectional.centerStart
+                      : Alignment.centerLeft,
                   child: Text(
                     translate("Your Desktop"),
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: isWindows
+                        ? Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontSize: 17, fontWeight: FontWeight.w600)
+                        : Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
             ],
           ),
           SizedBox(
-            height: 10.0,
+            height: isWindows ? 6.0 : 10.0,
           ),
           if (!isOutgoingOnly)
             Text(
@@ -1165,4 +1254,26 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
       onCancel: close,
     );
   });
+}
+
+// Small round icon button with consistent size and hover/press states.
+class _PdIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  const _PdIconButton(
+      {required this.icon, required this.tooltip, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        icon: Icon(icon),
+        iconSize: 18,
+        tooltip: translate(tooltip),
+        color: PdTokens.muted(context),
+        hoverColor: PdTokens.accent(context).withOpacity(0.08),
+        splashRadius: 17,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+        onPressed: onPressed,
+      );
 }
