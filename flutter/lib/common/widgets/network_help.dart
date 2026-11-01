@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/jalali.dart';
+import 'package:flutter_hbb/common/widgets/help_history.dart';
 import 'package:flutter_hbb/desktop/widgets/help_request_dialog.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:http/http.dart' as http;
@@ -69,6 +71,20 @@ class HelpApi {
 
   static Future<HelpResult> shot(String id) =>
       _call('POST', '/shot', body: {'id': id}, auth: true);
+
+  static Future<HelpResult> historyList({String q = '', int before = 0}) =>
+      _call('POST', '/history/list',
+          body: {'q': q, 'before': before, 'limit': 50}, auth: true);
+
+  static Future<HelpResult> historyAlive(List<int> ids) =>
+      _call('POST', '/history/alive', body: {'ids': ids}, auth: true);
+
+  static Future<HelpResult> historyEnd(int id) =>
+      _call('POST', '/history/end', body: {'id': id}, auth: true);
+
+  static Future<HelpResult> historyNote(int id, String note) =>
+      _call('POST', '/history/note',
+          body: {'id': id, 'note': note}, auth: true);
 
   static Future<HelpResult> cancel(String id, String password) =>
       _call('POST', '/cancel', body: {'id': id, 'password': password});
@@ -326,6 +342,9 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
   bool _busy = false;
   String _error = '';
   List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _inProgress = [];
+  int _section = 0; // 0 tickets, 1 history
+  final _historyKey = GlobalKey<HelpHistoryViewState>();
   Timer? _timer;
 
   bool get _signedIn => HelpApi.token != null;
@@ -334,10 +353,21 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
   void initState() {
     super.initState();
     if (_signedIn) _startPolling();
+    HelpSessionTracker.onEnded = _onSessionEnded;
+  }
+
+  void _onSessionEnded(Map<String, dynamic> item) {
+    if (!mounted) return;
+    _historyKey.currentState?.reload();
+    showHistoryEntryDialog(context, item, justEnded: true)
+        .then((_) => _historyKey.currentState?.reload());
   }
 
   @override
   void dispose() {
+    if (HelpSessionTracker.onEnded == _onSessionEnded) {
+      HelpSessionTracker.onEnded = null;
+    }
     _timer?.cancel();
     _user.dispose();
     _pass.dispose();
@@ -359,10 +389,14 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
       return;
     }
     if (r.ok) {
-      setState(() => _items = (r.data['requests'] as List)
+      final all = (r.data['requests'] as List)
           .map((e) => Map<String, dynamic>.from(e as Map))
-          .where((e) => e['status'] == 'waiting')
-          .toList());
+          .toList();
+      // The server lists the oldest request first: that one is priority 1.
+      setState(() {
+        _items = all.where((e) => e['status'] == 'waiting').toList();
+        _inProgress = all.where((e) => e['status'] == 'claimed').toList();
+      });
     }
   }
 
@@ -398,6 +432,8 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
       return;
     }
     setState(() => _items.removeWhere((e) => e['id'] == item['id']));
+    final hid = r.data['history_id'];
+    if (hid is int) HelpSessionTracker.start(hid, r.data['id'] as String);
     connect(context, r.data['id'] as String,
         password: r.data['password'] as String, isSharedPassword: false);
   }
@@ -463,13 +499,6 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
     if (v == null) return;
     await HelpApi.rename(item['id'] as String, v);
     _load();
-  }
-
-  String _ago(String iso) {
-    final t = DateTime.tryParse(iso);
-    if (t == null) return '';
-    final m = DateTime.now().toUtc().difference(t).inMinutes;
-    return m < 1 ? translate('Just now') : '$m ${translate('min')}';
   }
 
   @override
@@ -570,96 +599,258 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
                 textDirection: TextDirection.ltr),
             IconButton(
                 tooltip: translate('Refresh'),
-                onPressed: _load,
+                onPressed: () {
+                  _load();
+                  _historyKey.currentState?.reload();
+                },
                 icon: const Icon(Icons.refresh, size: 20)),
             TextButton(onPressed: _signOut, child: Text(translate('Logout'))),
           ],
         ),
-        const SizedBox(height: 6),
-        Text(translate('Click a system to connect'),
-            style: TextStyle(fontSize: 12, color: muted)),
+        const SizedBox(height: 10),
+        SegmentedButton<int>(
+          showSelectedIcon: false,
+          segments: [
+            ButtonSegment(
+              value: 0,
+              icon: const Icon(Icons.confirmation_number_outlined, size: 18),
+              label: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(translate('Tickets')),
+                if (_items.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  _CountBadge(_items.length),
+                ],
+              ]),
+            ),
+            ButtonSegment(
+              value: 1,
+              icon: const Icon(Icons.history_rounded, size: 18),
+              label: Text(translate('History')),
+            ),
+          ],
+          selected: {_section},
+          onSelectionChanged: (s) => setState(() => _section = s.first),
+        ),
         const SizedBox(height: 12),
         Expanded(
-          child: _items.isEmpty
-              ? Center(
-                  child: Text(translate('No systems need help'),
-                      style: TextStyle(color: muted)))
-              : ListView.separated(
-                  itemCount: _items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) {
-                    final it = _items[i];
-                    final name = (it['name'] ?? '') as String;
-                    return Material(
-                      color: theme.cardColor,
-                      borderRadius: BorderRadius.circular(14),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () => _connect(it),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: theme.dividerColor),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.desktop_windows_outlined,
-                                  color: theme.primaryColor),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                        name.isEmpty
-                                            ? it['id'] as String
-                                            : name,
-                                        style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600)),
-                                    Text(
-                                        '${it['ip']}  ·  ${it['id']}  ·  ${_ago(it['created_at'] as String)}',
-                                        textDirection: TextDirection.ltr,
-                                        style: TextStyle(
-                                            fontSize: 12, color: muted)),
-                                    if ((it['note'] ?? '') != '')
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 6),
-                                        child: Text(it['note'] as String,
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                            style:
-                                                const TextStyle(fontSize: 13)),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              if (it['has_shot'] == true)
-                                IconButton(
-                                    tooltip: translate('Screenshot'),
-                                    onPressed: () => _showShot(it),
-                                    icon: const Icon(Icons.image_outlined,
-                                        size: 20)),
-                              IconButton(
-                                  tooltip: translate('Rename'),
-                                  onPressed: () => _rename(it),
-                                  icon: const Icon(Icons.edit_outlined,
-                                      size: 18)),
-                              const SizedBox(width: 4),
-                              ElevatedButton(
-                                  onPressed: () => _connect(it),
-                                  child: Text(translate('Accept'))),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+          // Both sections stay alive so switching keeps the search and scroll.
+          child: IndexedStack(
+            index: _section,
+            children: [
+              _tickets(context),
+              HelpHistoryView(key: _historyKey),
+            ],
+          ),
         ),
       ],
     );
   }
+
+  Widget _tickets(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
+    if (_items.isEmpty && _inProgress.isEmpty) {
+      return Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.check_circle_outline, size: 40, color: muted),
+          const SizedBox(height: 8),
+          Text(translate('No systems need help'),
+              style: TextStyle(color: muted)),
+        ]),
+      );
+    }
+    return ListView(
+      children: [
+        if (_items.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+                translate(
+                    'Oldest request first: priority 1 has waited longest'),
+                style: TextStyle(fontSize: 12, color: muted)),
+          ),
+        for (var i = 0; i < _items.length; i++) ...[
+          _ticketCard(context, _items[i], i + 1),
+          const SizedBox(height: 8),
+        ],
+        if (_inProgress.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
+            child: Text(translate('In progress'),
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: muted)),
+          ),
+          for (final it in _inProgress) _inProgressRow(context, it),
+        ],
+      ],
+    );
+  }
+
+  Widget _ticketCard(
+      BuildContext context, Map<String, dynamic> it, int priority) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
+    final f = TehranFormat(Directionality.of(context) == TextDirection.rtl);
+    final name = (it['name'] ?? '') as String;
+    final wait = it['waiting_sec'] as int?;
+    final color = waitColor(wait);
+    final first = priority == 1;
+    final created = parseServerTime(it['created_at']);
+    return Material(
+      color: theme.cardColor,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _connect(it),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: first ? color : theme.dividerColor,
+                width: first ? 1.6 : 1),
+          ),
+          child: Row(
+            children: [
+              // Priority number, coloured by how long the system has waited.
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(f.number(priority),
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Flexible(
+                        child: Text(name.isEmpty ? it['id'] as String : name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w600)),
+                      ),
+                      if (first) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(translate('Priority'),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ]),
+                    const SizedBox(height: 2),
+                    Text('${it['ip']}  ·  ${it['id']}',
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(fontSize: 12, color: muted)),
+                    const SizedBox(height: 2),
+                    Text(
+                        '${translate('Waiting')}: ${formatDuration(context, wait)}'
+                        '${created == null ? '' : '  ·  ${f.time(created)}'}',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: color,
+                            fontWeight: FontWeight.w600)),
+                    if ((it['note'] ?? '') != '')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(it['note'] as String,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13)),
+                      ),
+                  ],
+                ),
+              ),
+              if (it['has_shot'] == true)
+                IconButton(
+                    tooltip: translate('Screenshot'),
+                    onPressed: () => _showShot(it),
+                    icon: const Icon(Icons.image_outlined, size: 20)),
+              IconButton(
+                  tooltip: translate('Rename'),
+                  onPressed: () => _rename(it),
+                  icon: const Icon(Icons.edit_outlined, size: 18)),
+              const SizedBox(width: 4),
+              ElevatedButton(
+                  onPressed: () => _connect(it),
+                  child: Text(translate('Accept'))),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _inProgressRow(BuildContext context, Map<String, dynamic> it) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
+    final name = (it['name'] ?? '') as String;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.withOpacity(0.25)),
+        ),
+        child: Row(children: [
+          const Icon(Icons.headset_mic_outlined, color: Colors.green, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(name.isEmpty ? it['id'] as String : name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          Text('${translate('Accepted by')} ',
+              style: TextStyle(fontSize: 12, color: muted)),
+          Text('${it['claimed_by'] ?? ''}',
+              textDirection: TextDirection.ltr,
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  final int count;
+  const _CountBadge(this.count);
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+        decoration: BoxDecoration(
+          color: Colors.redAccent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+            TehranFormat(Directionality.of(context) == TextDirection.rtl)
+                .number(count),
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      );
 }
