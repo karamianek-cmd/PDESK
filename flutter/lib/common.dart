@@ -644,7 +644,7 @@ class MyTheme {
       colorScheme: const ColorScheme.light(
           primary: teal, secondary: gold, background: sunken),
       textTheme: base.textTheme.apply(bodyColor: ink, displayColor: ink),
-      dialogTheme: DialogTheme(
+      dialogTheme: base.dialogTheme.copyWith(
         elevation: 12,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
