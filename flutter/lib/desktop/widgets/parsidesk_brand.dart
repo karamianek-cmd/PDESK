@@ -115,3 +115,42 @@ class ParsiDeskHeader extends StatelessWidget {
     );
   }
 }
+
+// Small ParsiPol mark for the bottom corner of the main window.
+class ParsiPolCornerMark extends StatelessWidget {
+  const ParsiPolCornerMark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = _dark(context);
+    return InkWell(
+      onTap: () => launchUrl(Uri.parse('https://parsipol.com')),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          textDirection: TextDirection.ltr,
+          children: [
+            Image.asset(
+                dark
+                    ? 'assets/parsipol-symbol-dark.png'
+                    : 'assets/parsipol-symbol.png',
+                width: 18,
+                height: 18),
+            const SizedBox(width: 6),
+            Text('ParsiPol',
+                textDirection: TextDirection.ltr,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                    color: dark
+                        ? const Color(0xFFF5F7FA)
+                        : const Color(0xFF10243F))),
+          ],
+        ),
+      ),
+    );
+  }
+}
