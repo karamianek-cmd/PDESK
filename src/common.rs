@@ -1043,8 +1043,27 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
     }
 }
 
+// ParsiDesk: built-in connection settings for the Parsipol server. These are only defaults;
+// whatever the user saves in Settings -> Network takes precedence over them.
+const PARSIDESK_SERVER: &str = "desk.parsipol.com";
+const PARSIDESK_KEY: &str = "J+fubhph+pIspRbcBx80UXqe0xlTCIFWgiRgvjkNyFg=";
+// ParsiDesk is distributed from desk.parsipol.com, so the upstream RustDesk update
+// endpoint must never be polled (it would offer the user an official RustDesk build).
+const PARSIDESK_CHECK_UPDATES: bool = false;
+
+pub fn apply_parsidesk_defaults() {
+    let mut settings = config::DEFAULT_SETTINGS.write().unwrap();
+    for (k, v) in [
+        ("custom-rendezvous-server", PARSIDESK_SERVER),
+        ("relay-server", PARSIDESK_SERVER),
+        ("key", PARSIDESK_KEY),
+    ] {
+        settings.entry(k.to_owned()).or_insert_with(|| v.to_owned());
+    }
+}
+
 pub fn check_software_update() {
-    if is_custom_client() {
+    if !PARSIDESK_CHECK_UPDATES || is_custom_client() {
         return;
     }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);
@@ -1163,6 +1182,9 @@ fn process_software_update_check_response(bytes: Bytes) -> ResultType<()> {
 // Because the url is always `https://api.rustdesk.com/version/latest`.
 #[tokio::main(flavor = "current_thread")]
 pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
+    if !PARSIDESK_CHECK_UPDATES {
+        return Ok(());
+    }
     let (request, url) =
         hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
     let proxy_conf = Config::get_socks();
@@ -2493,6 +2515,7 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
 }
 
 pub fn load_custom_client() {
+    apply_parsidesk_defaults();
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());

@@ -38,7 +38,7 @@ class SettingsPage extends StatefulWidget implements PageShape {
   State<SettingsPage> createState() => _SettingsState();
 }
 
-const url = 'https://rustdesk.com/';
+const url = 'https://desk.parsipol.com';
 
 enum KeepScreenOn {
   never,
@@ -1066,7 +1066,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 title: Text(translate("Version: ") + version),
                 value: Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('rustdesk.com',
+                  child: Text('desk.parsipol.com',
                       style: TextStyle(
                         decoration: TextDecoration.underline,
                       )),
@@ -1099,7 +1099,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             SettingsTile(
               title: Text(translate("Privacy Statement")),
               onPressed: (context) =>
-                  launchUrlString('https://rustdesk.com/privacy.html'),
+                  launchUrlString('https://desk.parsipol.com'),
               leading: Icon(Icons.privacy_tip),
             )
           ],
@@ -1210,15 +1210,15 @@ void showAbout(OverlayDialogManager dialogManager) {
       title: Text(translate('About RustDesk')),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
         Text('Version: $version'),
-        const Text('ParsiDesk ساخته‌شده توسط شرکت پارسی‌پل (Parsipol.com)'),
+        const Text('ParsiDesk ساخته‌شده توسط پارسیپل (Parsipol.com)'),
         InkWell(
             onTap: () async {
-              const url = 'https://rustdesk.com/';
+              const url = 'https://desk.parsipol.com';
               await launchUrl(Uri.parse(url));
             },
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('rustdesk.com',
+              child: Text('desk.parsipol.com',
                   style: TextStyle(
                     decoration: TextDecoration.underline,
                   )),
