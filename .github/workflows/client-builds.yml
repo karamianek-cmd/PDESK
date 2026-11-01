@@ -6,10 +6,15 @@ on:
     branches:
       - client-builds
 
+permissions:
+  contents: write
+
 jobs:
   build-clients:
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
+    permissions:
+      contents: write
     with:
       upload-artifact: true
       upload-tag: "manual"
