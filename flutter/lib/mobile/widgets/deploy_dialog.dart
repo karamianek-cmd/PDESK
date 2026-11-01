@@ -78,6 +78,8 @@ void showDeployDialog() {
           TextField(
             controller: tokenController,
             decoration: InputDecoration(labelText: translate("API Token")),
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.left,
             obscureText: true,
             enableSuggestions: false,
             autocorrect: false,

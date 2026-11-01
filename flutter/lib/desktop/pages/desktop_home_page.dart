@@ -364,6 +364,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           },
                           child: TextFormField(
                             controller: model.serverPasswd,
+                            textDirection: TextDirection.ltr,
+                            textAlign: TextAlign.left,
                             readOnly: true,
                             decoration: InputDecoration(
                               border: InputBorder.none,
@@ -999,6 +1001,8 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
               children: [
                 Expanded(
                   child: TextField(
+                    textDirection: TextDirection.ltr,
+                    textAlign: TextAlign.left,
                     obscureText: true,
                     decoration: InputDecoration(
                         labelText: translate('Password'),
@@ -1029,6 +1033,8 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
               children: [
                 Expanded(
                   child: TextField(
+                    textDirection: TextDirection.ltr,
+                    textAlign: TextAlign.left,
                     obscureText: true,
                     decoration: InputDecoration(
                         labelText: translate('Confirmation'),

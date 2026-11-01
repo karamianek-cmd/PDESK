@@ -543,6 +543,8 @@ class DialogTextField extends StatelessWidget {
                 controller: controller,
                 focusNode: focusNode,
                 autofocus: true,
+                textDirection: TextDirection.ltr,
+                textAlign: TextAlign.left,
                 obscureText: obscureText,
                 keyboardType: keyboardType,
                 inputFormatters: inputFormatters,

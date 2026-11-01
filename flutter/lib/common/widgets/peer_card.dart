@@ -1469,6 +1469,8 @@ void _rdpDialog(String id) async {
                         : SizedBox.shrink(),
                     Expanded(
                       child: Obx(() => TextField(
+                            textDirection: TextDirection.ltr,
+                            textAlign: TextAlign.left,
                             obscureText: secure.value,
                             maxLength: maxLength,
                             decoration: InputDecoration(

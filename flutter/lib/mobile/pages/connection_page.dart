@@ -18,6 +18,7 @@ import '../../models/model.dart';
 import '../../models/platform_model.dart';
 import 'home_page.dart';
 import '../../desktop/widgets/parsidesk_brand.dart';
+import '../../desktop/widgets/pardis_art.dart';
 
 /// Connection page for connecting to a remote peer.
 class ConnectionPage extends StatefulWidget implements PageShape {
@@ -81,7 +82,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
   @override
   Widget build(BuildContext context) {
     Provider.of<FfiModel>(context);
-    return CustomScrollView(
+    final page = CustomScrollView(
       slivers: [
         SliverList(
             delegate: SliverChildListDelegate([
@@ -96,6 +97,16 @@ class _ConnectionPageState extends State<ConnectionPage> {
         )
       ],
     ).marginOnly(top: 2, left: 10, right: 10);
+    if (!(isAndroid && MyTheme.isPardis)) return page;
+    return Stack(children: [
+      const Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 190,
+          child: ParsiDeskBottomArt()),
+      page,
+    ]);
   }
 
   /// Callback for the connect button.

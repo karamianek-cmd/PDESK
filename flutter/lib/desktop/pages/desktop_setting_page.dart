@@ -3199,6 +3199,8 @@ _LabeledTextField(
           TextField(
             controller: controller,
             enabled: enabled,
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.left,
             obscureText: secure,
             autocorrect: false,
             decoration: InputDecoration(
@@ -3452,6 +3454,8 @@ void changeSocks5Proxy() async {
                       ).marginOnly(right: 10)),
                 Expanded(
                   child: Obx(() => TextField(
+                        textDirection: TextDirection.ltr,
+                        textAlign: TextAlign.left,
                         obscureText: obscure.value,
                         decoration: InputDecoration(
                             labelText: isMobile ? translate('Password') : null,

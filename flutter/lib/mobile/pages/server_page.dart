@@ -542,6 +542,7 @@ class ServerInfo extends StatelessWidget {
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text(
                 !showOneTime ? '-' : model.serverPasswd.value.text,
+                textDirection: TextDirection.ltr,
                 style: textStyleValue,
               ),
               !showOneTime

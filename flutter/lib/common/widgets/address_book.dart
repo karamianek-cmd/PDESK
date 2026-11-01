@@ -585,6 +585,8 @@ class _AddressBookState extends State<AddressBook> {
                       input: Obx(
                         () => TextField(
                           controller: passwordController,
+                          textDirection: TextDirection.ltr,
+                          textAlign: TextAlign.left,
                           obscureText: !passwordVisible,
                           decoration: InputDecoration(
                             labelText: stateGlobal.isPortrait.isFalse
