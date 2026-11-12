@@ -11,6 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 
 import '../../common.dart';
+import '../../common/staff_auth.dart';
+import '../../common/widgets/lab_pane.dart';
 import '../../common/widgets/peer_tab_page.dart';
 import '../../common/widgets/autocomplete.dart';
 import '../../consts.dart';
@@ -82,6 +84,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
   @override
   Widget build(BuildContext context) {
     Provider.of<FfiModel>(context);
+    // Lab devices only receive support connections: no remote-ID entry.
+    if (StaffAuth.isLab) return const LabNamePane();
     final page = CustomScrollView(
       slivers: [
         SliverList(

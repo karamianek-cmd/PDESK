@@ -5,18 +5,10 @@ import 'package:http/http.dart' as http;
 
 import 'package:flutter_hbb/models/platform_model.dart';
 
-// One selectable lab from the central directory (id + names only).
-class LabEntry {
-  final int id;
-  final String name;
-  final String en;
-  const LabEntry(this.id, this.name, this.en);
-}
-
 // Staff-edition login. Parsipol staff sign in with a password; lab users sign in
-// with their lab + username from a registered computer. The Parsipol server holds
-// the directory service account and does the verification; only the resulting
-// identity is kept on this device, never a password.
+// with their 4-digit Lab ID from a registered computer (the MAC is the credential).
+// The Parsipol server holds the directory service account and does the verification;
+// only the resulting identity is kept on this device, never a password.
 class StaffAuth {
   static const _kBase = 'https://desk.parsipol.com/help/api';
   static const _kUserOption = 'staff-username';
@@ -25,6 +17,8 @@ class StaffAuth {
   static const _kModeOption = 'staff-mode';
   static const _kLabIdOption = 'staff-lab-id';
   static const _kLabNameOption = 'staff-lab-name';
+  static const _kHelpTokenOption = 'staff-help-token';
+  static const _kHelpAdminOption = 'staff-help-admin';
 
   static final loggedIn = false.obs;
   static String username = '';
@@ -33,6 +27,12 @@ class StaffAuth {
   static String mode = 'staff';
   static String labId = '';
   static String labName = '';
+  // Help-admin session minted by the server on staff login (no admin password).
+  static String helpToken = '';
+  static String helpAdminName = '';
+
+  static bool get isLab => loggedIn.value && mode == 'lab';
+  static bool get isStaff => loggedIn.value && mode == 'staff';
 
   static void load() {
     username = bind.mainGetLocalOption(key: _kUserOption);
@@ -41,14 +41,19 @@ class StaffAuth {
     mode = bind.mainGetLocalOption(key: _kModeOption) == 'lab' ? 'lab' : 'staff';
     labId = bind.mainGetLocalOption(key: _kLabIdOption);
     labName = bind.mainGetLocalOption(key: _kLabNameOption);
+    helpToken = bind.mainGetLocalOption(key: _kHelpTokenOption);
+    helpAdminName = bind.mainGetLocalOption(key: _kHelpAdminOption);
     loggedIn.value = username.isNotEmpty;
   }
 
   // Human-readable identity shown in Settings / About.
   static String get accountLabel {
-    final parts = <String>[mode == 'lab' ? username : fullName];
+    if (mode == 'lab') {
+      final name = labName.isNotEmpty ? labName : labId;
+      return labName.isNotEmpty && labId.isNotEmpty ? '$name ($labId)' : name;
+    }
+    final parts = <String>[fullName];
     if (role.isNotEmpty) parts.add('($role)');
-    if (mode == 'lab' && labName.isNotEmpty) parts.add('— $labName');
     return parts.join(' ');
   }
 
@@ -78,6 +83,8 @@ class StaffAuth {
         mode = 'staff';
         labId = '';
         labName = '';
+        helpToken = (data['admin_token'] as String?) ?? '';
+        helpAdminName = (data['admin_username'] as String?) ?? user;
         await _persist();
         loggedIn.value = true;
         return null;
@@ -91,34 +98,35 @@ class StaffAuth {
     }
   }
 
-  // Lab login: no password; the server checks the username is enabled for the lab
-  // and that one of this computer's MACs is a registered terminal.
-  static Future<String?> loginLab(
-      LabEntry lab, String user, List<String> macs) async {
+  // Lab login: only the 4-digit Lab ID is typed. The server accepts the login
+  // when one of this computer's MACs is a registered terminal for that lab.
+  static Future<String?> loginLab(String labId, List<String> macs) async {
     try {
       final r = await http
           .post(Uri.parse('$_kBase/lab-login'),
               headers: {'Content-Type': 'application/json'},
-              body: jsonEncode(
-                  {'lab_id': lab.id, 'username': user, 'macs': macs}))
+              body: jsonEncode({'lab_id': labId, 'macs': macs}))
           .timeout(const Duration(seconds: 40));
       final data =
           jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
       if (r.statusCode == 200 && data['ok'] == true) {
-        username = user;
-        fullName = (data['username'] as String?) ?? user;
-        role = (data['role'] as String?) ?? '';
+        username = labId;
+        fullName = (data['lab_name'] as String?) ?? '';
+        role = '';
         mode = 'lab';
-        labId = '${lab.id}';
-        labName = lab.name;
+        this.labId = labId;
+        labName = fullName;
+        helpToken = '';
+        helpAdminName = '';
         await _persist();
         loggedIn.value = true;
         return null;
       }
+      if (r.statusCode == 400) return 'Invalid Lab ID';
       if (r.statusCode == 401) {
         return data['error'] == 'unregistered'
             ? 'This computer is not registered for this lab'
-            : 'Invalid username or password';
+            : 'Invalid Lab ID';
       }
       if (r.statusCode == 403) return 'This account is disabled';
       if (r.statusCode == 429) return 'Too many attempts, try again later';
@@ -135,6 +143,8 @@ class StaffAuth {
     await bind.mainSetLocalOption(key: _kModeOption, value: mode);
     await bind.mainSetLocalOption(key: _kLabIdOption, value: labId);
     await bind.mainSetLocalOption(key: _kLabNameOption, value: labName);
+    await bind.mainSetLocalOption(key: _kHelpTokenOption, value: helpToken);
+    await bind.mainSetLocalOption(key: _kHelpAdminOption, value: helpAdminName);
   }
 
   static Future<void> logout() async {
@@ -144,31 +154,42 @@ class StaffAuth {
     mode = 'staff';
     labId = '';
     labName = '';
+    helpToken = '';
+    helpAdminName = '';
     await _persist();
     loggedIn.value = false;
   }
 }
 
-// Cached lab directory for the login picker. Only id + names are fetched; the
-// server keeps GUIDs, service URLs and contact details to itself.
-class LabDirectory {
-  static List<LabEntry>? _cache;
+// One ParsiPol staff member selectable as a support target (name + username only).
+class StaffEntry {
+  final String username;
+  final String fullName;
+  const StaffEntry(this.username, this.fullName);
 
-  static Future<List<LabEntry>> load() async {
+  String get displayName => fullName.isNotEmpty ? fullName : username;
+}
+
+// Cached staff directory for the support picker.
+class StaffDirectory {
+  static List<StaffEntry>? _cache;
+
+  static Future<List<StaffEntry>> load() async {
     final cached = _cache;
     if (cached != null) return cached;
     final r = await http
-        .get(Uri.parse('${StaffAuth._kBase}/lab-list'))
-        .timeout(const Duration(seconds: 40));
+        .get(Uri.parse('${StaffAuth._kBase}/staff-list'))
+        .timeout(const Duration(seconds: 30));
     final data = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
     if (r.statusCode != 200 || data['ok'] != true) {
-      throw Exception('lab list unavailable');
+      throw Exception('staff list unavailable');
     }
-    final labs = (data['labs'] as List<dynamic>)
-        .map((e) => LabEntry((e['id'] as num).toInt(),
-            (e['name'] as String?) ?? '', (e['en'] as String?) ?? ''))
+    final staff = (data['staff'] as List<dynamic>)
+        .map((e) => StaffEntry((e['username'] as String?) ?? '',
+            (e['full_name'] as String?) ?? ''))
+        .where((e) => e.username.isNotEmpty)
         .toList();
-    _cache = labs;
-    return labs;
+    _cache = staff;
+    return staff;
   }
 }

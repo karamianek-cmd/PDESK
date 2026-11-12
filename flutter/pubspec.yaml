@@ -174,6 +174,15 @@ flutter:
       fonts:
         - asset: assets/fonts/IRANSans/IRANSans-Regular.ttf
           weight: 400
+    # Lab name display font (OFL, rastikerdar/shabnam-font v5.0.1).
+    - family: Shabnam
+      fonts:
+        - asset: assets/fonts/Shabnam/Shabnam.ttf
+          weight: 400
+        - asset: assets/fonts/Shabnam/Shabnam-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Shabnam/Shabnam-Bold.ttf
+          weight: 700
     - family: GestureIcons
       fonts:
         - asset: assets/gestures.ttf

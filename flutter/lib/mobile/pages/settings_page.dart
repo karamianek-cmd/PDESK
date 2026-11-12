@@ -773,18 +773,20 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 leading: Icon(Icons.logout),
                 onPressed: (context) async {
                   Navigator.of(context).popUntil((route) => route.isFirst);
+                  await HelpApi.logout();
                   await StaffAuth.logout();
                 }),
-          SettingsTile(
-              title: Text(translate('Network admin')),
-              leading: Icon(Icons.support_agent),
-              onPressed: (context) {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                        appBar:
-                            AppBar(title: Text(translate('Network admin'))),
-                        body: const NetworkAdminPanel())));
-              }),
+          if (!StaffAuth.isLab)
+            SettingsTile(
+                title: Text(translate('Network admin')),
+                leading: Icon(Icons.support_agent),
+                onPressed: (context) {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => Scaffold(
+                          appBar:
+                              AppBar(title: Text(translate('Network admin'))),
+                          body: const NetworkAdminPanel())));
+                }),
           if (!disabledSettings && !_hideNetwork && !_hideServer)
             SettingsTile(
                 title: Text(translate('ID/Relay Server')),

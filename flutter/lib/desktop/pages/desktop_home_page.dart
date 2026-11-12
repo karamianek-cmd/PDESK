@@ -24,6 +24,8 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 import '../widgets/button.dart';
 import '../widgets/parsidesk_brand.dart';
+import 'package:flutter_hbb/common/staff_auth.dart';
+import 'package:flutter_hbb/common/widgets/lab_pane.dart';
 import 'package:flutter_hbb/common/widgets/network_help.dart';
 import '../widgets/pardis_art.dart';
 
@@ -60,15 +62,19 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final isIncomingOnly = bind.isIncomingOnly();
-    final home = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
-    );
+    final home = Obx(() {
+      final isIncomingOnly = bind.isIncomingOnly();
+      // Lab devices keep the right pane for the lab name even in incoming-only builds.
+      final showRight = !isIncomingOnly || StaffAuth.isLab;
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          buildLeftPane(context),
+          if (showRight) const VerticalDivider(width: 1),
+          if (showRight) Expanded(child: buildRightPane(context)),
+        ],
+      );
+    });
     return _buildBlock(
         child: isWindows
             ? Stack(children: [
@@ -210,11 +216,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   buildRightPane(BuildContext context) {
+    final surface = isWindows
+        ? (MyTheme.isPardis ? Colors.transparent : PdTokens.surface(context))
+        : Theme.of(context).scaffoldBackgroundColor;
+    if (StaffAuth.isLab) {
+      return Container(color: surface, child: const LabNamePane());
+    }
     return Container(
-      color: isWindows
-          ? (MyTheme.isPardis ? Colors.transparent : PdTokens.surface(context))
-          : Theme.of(context).scaffoldBackgroundColor,
-      child: ConnectionPage(),
+      color: surface,
+      child: Column(children: [
+        if (StaffAuth.isStaff) const AdminEntranceButton(),
+        Expanded(child: ConnectionPage()),
+      ]),
     );
   }
 

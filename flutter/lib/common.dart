@@ -28,6 +28,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 
 import '../consts.dart';
+import 'common/staff_auth.dart';
 import 'common/widgets/overlay.dart';
 import 'mobile/pages/file_manager_page.dart';
 import 'mobile/pages/remote_page.dart';
@@ -2669,6 +2670,11 @@ connect(BuildContext context, String id,
     String? connToken,
     bool? isSharedPassword}) async {
   if (id == '') return;
+  // Lab devices only receive support connections; they never dial out.
+  if (StaffAuth.isLab) {
+    showToast(translate('Lab devices can only receive connections'));
+    return;
+  }
   if (!isDesktop || desktopType == DesktopType.main) {
     try {
       if (Get.isRegistered<IDTextEditingController>()) {

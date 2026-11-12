@@ -67,7 +67,8 @@ enum SettingsTabKey {
 
 class DesktopSettingPage extends StatefulWidget {
   final SettingsTabKey initialTabkey;
-  static final List<SettingsTabKey> tabKeys = [
+  // Getter so the lab gate re-evaluates after a logout/login switch.
+  static List<SettingsTabKey> get tabKeys => [
     if (bind.mainGetBuildinOption(key: kOptionHideGeneralSetting) != 'Y')
       SettingsTabKey.general,
     if (!isWeb &&
@@ -84,7 +85,7 @@ class DesktopSettingPage extends StatefulWidget {
         !bind.isDisableSettings() &&
         bind.mainGetBuildinOption(key: kOptionHideRemotePrinterSetting) != 'Y')
       SettingsTabKey.printer,
-    SettingsTabKey.networkAdmin,
+    if (!StaffAuth.isLab) SettingsTabKey.networkAdmin,
     SettingsTabKey.about,
   ];
 
@@ -2888,7 +2889,10 @@ Widget _winAbout(BuildContext context, String license, String buildDate,
                             StaffAuth.accountLabel,
                             style: const TextStyle(fontSize: 13.5))),
                     OutlinedButton.icon(
-                      onPressed: () => StaffAuth.logout(),
+                      onPressed: () async {
+                        await HelpApi.logout();
+                        await StaffAuth.logout();
+                      },
                       icon: const Icon(Icons.logout, size: 18),
                       label: Text(translate('Logout')),
                     ),

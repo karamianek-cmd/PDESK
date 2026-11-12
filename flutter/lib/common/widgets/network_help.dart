@@ -6,8 +6,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/jalali.dart';
+import 'package:flutter_hbb/common/staff_auth.dart';
 import 'package:flutter_hbb/common/widgets/help_history.dart';
 import 'package:flutter_hbb/desktop/widgets/help_request_dialog.dart';
+import 'package:flutter_hbb/desktop/widgets/parsidesk_brand.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:http/http.dart' as http;
 
@@ -56,14 +58,28 @@ class HelpApi {
   }
 
   // note: null keeps the note stored on the server (refreshes and older apps send none).
+  // targetStaff: null broadcasts to every admin; a username routes the request
+  // only to that ParsiPol staff member.
   static Future<HelpResult> request(String id, String name, String password,
-          {String? note}) =>
+          {String? note, String? targetStaff}) =>
       _call('POST', '/request', body: {
         'id': id,
         'name': name,
         'password': password,
         if (note != null) 'note': note,
+        if (targetStaff != null) 'target_staff': targetStaff,
       });
+
+  // Staff sign in through StaffAuth; the server mints their help-admin token,
+  // so the admin panel opens without asking for admin credentials again.
+  static void adoptStaffToken() {
+    if (token == null && StaffAuth.isStaff && StaffAuth.helpToken.isNotEmpty) {
+      token = StaffAuth.helpToken;
+      adminName = StaffAuth.helpAdminName.isNotEmpty
+          ? StaffAuth.helpAdminName
+          : StaffAuth.username;
+    }
+  }
 
   static Future<HelpResult> attach(String id, String password, String shot) =>
       _call('POST', '/attach',
@@ -134,6 +150,8 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
   DateTime? _since;
   String _lastId = '';
   String _lastPw = '';
+  String _target = '';
+  String _targetName = '';
 
   String get _id =>
       gFFI.serverModel.serverId.text.replaceAll(RegExp(r'\s'), '');
@@ -190,10 +208,20 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
     );
   }
 
+  Future<StaffEntry?> _pickSupportStaff() => showDialog<StaffEntry>(
+      context: context, builder: (_) => const _StaffPickerDialog());
+
   Future<void> _turnOn() async {
     if (_id.length < 6 || _password.length < 4 || _password == '-') {
       showToast(translate('Enable one-time password first'));
       return;
+    }
+    // Lab members choose which ParsiPol staff member should help them.
+    if (StaffAuth.isLab) {
+      final staff = await _pickSupportStaff();
+      if (staff == null || !mounted) return;
+      _target = staff.username;
+      _targetName = staff.displayName;
     }
     // Windows asks for an optional note and screenshot as well.
     HelpRequestInput? input;
@@ -221,7 +249,9 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
     _since = DateTime.now();
     setState(() {
       _on = true;
-      _note = translate('Waiting for the network admin');
+      _note = _targetName.isEmpty
+          ? translate('Waiting for the network admin')
+          : '${translate('Waiting for the network admin')} · $_targetName';
     });
     _timer?.cancel();
     _timer = Timer.periodic(_refresh, (_) => _tick());
@@ -230,7 +260,8 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
   Future<bool> _send(String name, {String? note}) async {
     _lastId = _id;
     _lastPw = _password;
-    final r = await HelpApi.request(_lastId, name, _lastPw, note: note);
+    final r = await HelpApi.request(_lastId, name, _lastPw,
+        note: note, targetStaff: _target.isEmpty ? null : _target);
     if (!r.ok) {
       showToast(translate('Cannot reach the server'));
       return false;
@@ -253,7 +284,8 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
     if (_id.length < 6 || pw.length < 4 || pw == '-') return;
     _lastId = _id;
     _lastPw = pw;
-    final r = await HelpApi.request(_lastId, name, pw);
+    final r = await HelpApi.request(_lastId, name, pw,
+        targetStaff: _target.isEmpty ? null : _target);
     if (!mounted) return;
     if (r.ok && r.data['status'] == 'claimed') {
       _finish(translate('Network admin is connecting'));
@@ -262,6 +294,8 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
 
   void _finish(String message) {
     _timer?.cancel();
+    _target = '';
+    _targetName = '';
     if (!mounted) return;
     setState(() {
       _on = false;
@@ -272,6 +306,8 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
 
   Future<void> _turnOff() async {
     _timer?.cancel();
+    _target = '';
+    _targetName = '';
     setState(() {
       _on = false;
       _note = '';
@@ -352,6 +388,7 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
   @override
   void initState() {
     super.initState();
+    HelpApi.adoptStaffToken();
     if (_signedIn) _startPolling();
     HelpSessionTracker.onEnded = _onSessionEnded;
   }
@@ -422,13 +459,16 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
 
   Future<void> _signOut() async {
     _timer?.cancel();
+    final wasStaff = StaffAuth.isStaff;
     await HelpApi.logout();
-    if (mounted) {
-      setState(() {
-        _items = [];
-        _inProgress = [];
-      });
-    }
+    // Staff hold no separate admin password: signing out ends the whole session.
+    if (wasStaff) await StaffAuth.logout();
+    if (!mounted) return;
+    setState(() {
+      _items = [];
+      _inProgress = [];
+    });
+    if (wasStaff) Navigator.of(context).maybePop();
   }
 
   Future<void> _connect(Map<String, dynamic> item) async {
@@ -513,7 +553,30 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: _signedIn ? _list(context) : _form(context),
+      child: _signedIn
+          ? _list(context)
+          : StaffAuth.isStaff
+              ? _expiredView(context)
+              : _form(context),
+    );
+  }
+
+  Widget _expiredView(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.65);
+    return Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.lock_clock_outlined, size: 40, color: muted),
+        const SizedBox(height: 12),
+        Text(translate('Admin session expired'),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 16),
+        ElevatedButton(
+            onPressed: () async {
+              await HelpApi.logout();
+              await StaffAuth.logout();
+            },
+            child: Text(translate('Login again'))),
+      ]),
     );
   }
 
@@ -861,4 +924,212 @@ class _CountBadge extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w700)),
       );
+}
+
+// ------------------------------------------------------------------ entrances
+
+// Right-pane entrance for signed-in ParsiPol staff: opens the admin panel
+// already authenticated with the token minted at staff login.
+class AdminEntranceButton extends StatelessWidget {
+  const AdminEntranceButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.65);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+      child: Material(
+        color: PdTokens.surface(context),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => openAdminPanel(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: PdTokens.border(context)),
+            ),
+            child: Row(children: [
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: PdTokens.accent(context).withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.admin_panel_settings_rounded,
+                    size: 20, color: PdTokens.accent(context)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(translate('Admin panel'),
+                        style: const TextStyle(
+                            fontSize: 14.5, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(translate('Support requests and history'),
+                        style: TextStyle(fontSize: 12, color: muted)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 22, color: muted),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void openAdminPanel(BuildContext context) {
+  HelpApi.adoptStaffToken();
+  showDialog(
+      context: context,
+      builder: (_) => Dialog(
+          insetPadding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 720),
+              child: const SizedBox.expand(child: NetworkAdminPanel()))));
+}
+
+// ------------------------------------------------------- support staff picker
+
+class _StaffPickerDialog extends StatefulWidget {
+  const _StaffPickerDialog();
+
+  @override
+  State<_StaffPickerDialog> createState() => _StaffPickerDialogState();
+}
+
+class _StaffPickerDialogState extends State<_StaffPickerDialog> {
+  final _search = TextEditingController();
+  List<StaffEntry> _staff = [];
+  String _query = '';
+  String _error = '';
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+    try {
+      final staff = await StaffDirectory.load();
+      if (!mounted) return;
+      setState(() {
+        _staff = staff;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = translate('Cannot load the staff list');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.65);
+    final q = _query.trim().toLowerCase();
+    final shown = q.isEmpty
+        ? _staff
+        : _staff
+            .where((s) =>
+                s.displayName.toLowerCase().contains(q) ||
+                s.username.toLowerCase().contains(q))
+            .toList();
+    return AlertDialog(
+      title: Text(translate('Choose support staff')),
+      content: SizedBox(
+        width: 420,
+        height: 480,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(translate('Who should help you?'),
+                style: TextStyle(fontSize: 13, color: muted)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _search,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: translate('Search staff'),
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error.isNotEmpty
+                      ? Center(
+                          child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(_error,
+                                    style:
+                                        TextStyle(fontSize: 13, color: muted)),
+                                const SizedBox(height: 12),
+                                OutlinedButton(
+                                    onPressed: _load,
+                                    child: Text(translate('Retry'))),
+                              ]))
+                      : shown.isEmpty
+                          ? Center(
+                              child: Text(translate('No results'),
+                                  style: TextStyle(fontSize: 13, color: muted)))
+                          : ListView.builder(
+                              itemCount: shown.length,
+                              itemBuilder: (context, i) {
+                                final s = shown[i];
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: PdTokens.accent(context)
+                                        .withOpacity(0.12),
+                                    child: Icon(Icons.person_rounded,
+                                        size: 20,
+                                        color: PdTokens.accent(context)),
+                                  ),
+                                  title: Text(s.displayName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                  subtitle: Text(s.username,
+                                      textDirection: TextDirection.ltr,
+                                      style: TextStyle(
+                                          fontSize: 12, color: muted)),
+                                  onTap: () => Navigator.pop(context, s),
+                                );
+                              },
+                            ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(translate('Cancel'))),
+      ],
+    );
+  }
 }
