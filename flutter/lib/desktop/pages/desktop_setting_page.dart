@@ -1,4 +1,5 @@
 import 'package:flutter_hbb/desktop/widgets/parsidesk_brand.dart';
+import 'package:flutter_hbb/common/staff_auth.dart';
 import 'package:flutter_hbb/common/widgets/network_help.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -2878,6 +2879,21 @@ Widget _winAbout(BuildContext context, String license, String buildDate,
                   ]),
                 ),
               ),
+              if (StaffAuth.loggedIn.value)
+                section(
+                  'Staff account',
+                  Row(children: [
+                    Expanded(
+                        child: Text(
+                            '${StaffAuth.fullName} (${StaffAuth.role})',
+                            style: const TextStyle(fontSize: 13.5))),
+                    OutlinedButton.icon(
+                      onPressed: () => StaffAuth.logout(),
+                      icon: const Icon(Icons.logout, size: 18),
+                      label: Text(translate('Logout')),
+                    ),
+                  ]),
+                ),
               section(
                 'Details',
                 Column(children: [

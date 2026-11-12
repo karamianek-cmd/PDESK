@@ -24,6 +24,8 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'common.dart';
+import 'common/staff_auth.dart';
+import 'common/widgets/staff_login.dart';
 import 'consts.dart';
 import 'mobile/pages/home_page.dart';
 import 'mobile/pages/server_page.dart';
@@ -124,6 +126,7 @@ Future<void> initEnv(String appType) async {
   // for convenience, use global FFI on mobile platform
   // focus on multi-ffi on desktop first
   await initGlobalFFI();
+  StaffAuth.load();
   // await Firebase.initializeApp();
   _registerEventHandler();
   // Update the system theme.
@@ -502,11 +505,12 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           theme: MyTheme.activeLightTheme,
           darkTheme: MyTheme.darkTheme,
           themeMode: MyTheme.currentThemeMode(),
-          home: isDesktop
-              ? const DesktopTabPage()
-              : isWeb
-                  ? WebHomePage()
-                  : HomePage(),
+          home: StaffGate(
+              child: isDesktop
+                  ? const DesktopTabPage()
+                  : isWeb
+                      ? WebHomePage()
+                      : HomePage()),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

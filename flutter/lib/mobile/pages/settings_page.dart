@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hbb/common/staff_auth.dart';
 import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:get/get.dart';
@@ -764,6 +765,16 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             ],
           ),
         SettingsSection(title: Text(translate("Settings")), tiles: [
+          if (StaffAuth.loggedIn.value)
+            SettingsTile(
+                title: Text(translate('Logout')),
+                description:
+                    Text('${StaffAuth.fullName} (${StaffAuth.role})'),
+                leading: Icon(Icons.logout),
+                onPressed: (context) async {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  await StaffAuth.logout();
+                }),
           SettingsTile(
               title: Text(translate('Network admin')),
               leading: Icon(Icons.support_agent),

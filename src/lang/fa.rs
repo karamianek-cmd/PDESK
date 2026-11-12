@@ -934,5 +934,12 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("IRANSans font and a cleaner main screen", "قلم ایران‌سنس و صفحهٔ اصلی مرتب‌تر"),
         ("Redesigned settings and About", "طراحی تازهٔ تنظیمات و درباره"),
         ("Downloads", "دانلودها"),
+        ("Staff login", "ورود کارکنان"),
+        ("Staff edition", "نسخه کارکنان"),
+        ("Staff account", "حساب کاربری کارکنان"),
+        ("Invalid username or password", "نام کاربری یا رمز عبور اشتباه است"),
+        ("This account is disabled", "این حساب کاربری غیرفعال است"),
+        ("Too many attempts, try again later", "تلاش بیش از حد؛ لطفاً بعداً دوباره امتحان کنید"),
+        ("Cannot reach the staff server", "ارتباط با سرور کارکنان برقرار نشد"),
     ].iter().cloned().collect();
 }
