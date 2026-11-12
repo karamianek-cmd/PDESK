@@ -995,6 +995,22 @@ pub fn main_get_login_device_info() -> SyncReturn<String> {
     SyncReturn(get_login_device_info_json())
 }
 
+pub fn main_get_mac_addresses() -> SyncReturn<String> {
+    let mut macs: Vec<String> = Vec::new();
+    #[cfg(not(target_os = "ios"))]
+    {
+        for interface in default_net::get_interfaces() {
+            if let Some(mac) = interface.mac_addr {
+                let addr = mac.address();
+                if !addr.is_empty() && addr != "00:00:00:00:00:00" && !macs.contains(&addr) {
+                    macs.push(addr);
+                }
+            }
+        }
+    }
+    SyncReturn(serde_json::to_string(&macs).unwrap_or_else(|_| "[]".to_owned()))
+}
+
 pub fn main_change_id(new_id: String) {
     change_id(new_id)
 }

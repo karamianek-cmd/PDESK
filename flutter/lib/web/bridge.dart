@@ -804,6 +804,10 @@ class RustdeskImpl {
     });
   }
 
+  String mainGetMacAddresses({dynamic hint}) {
+    return '[]';
+  }
+
   Future<void> mainChangeId({required String newId, dynamic hint}) {
     throw UnimplementedError("mainChangeId");
   }

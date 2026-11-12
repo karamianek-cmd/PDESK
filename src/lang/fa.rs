@@ -941,5 +941,14 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("This account is disabled", "این حساب کاربری غیرفعال است"),
         ("Too many attempts, try again later", "تلاش بیش از حد؛ لطفاً بعداً دوباره امتحان کنید"),
         ("Cannot reach the staff server", "ارتباط با سرور کارکنان برقرار نشد"),
+        ("Parsipol staff", "کارکنان پارسی‌پل"),
+        ("Lab user", "کاربر آزمایشگاه"),
+        ("Lab", "آزمایشگاه"),
+        ("Select lab", "انتخاب آزمایشگاه"),
+        ("Search labs", "جستجوی آزمایشگاه‌ها"),
+        ("Select your lab", "لطفاً آزمایشگاه خود را انتخاب کنید"),
+        ("No network adapter found", "کارت شبکه‌ای یافت نشد"),
+        ("This computer is not registered for this lab", "این رایانه برای این آزمایشگاه ثبت نشده است"),
+        ("Cannot load the lab list", "دریافت فهرست آزمایشگاه‌ها ممکن نشد"),
     ].iter().cloned().collect();
 }

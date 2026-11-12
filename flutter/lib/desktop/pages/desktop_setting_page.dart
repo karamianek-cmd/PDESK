@@ -2885,7 +2885,7 @@ Widget _winAbout(BuildContext context, String license, String buildDate,
                   Row(children: [
                     Expanded(
                         child: Text(
-                            '${StaffAuth.fullName} (${StaffAuth.role})',
+                            StaffAuth.accountLabel,
                             style: const TextStyle(fontSize: 13.5))),
                     OutlinedButton.icon(
                       onPressed: () => StaffAuth.logout(),

@@ -769,7 +769,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             SettingsTile(
                 title: Text(translate('Logout')),
                 description:
-                    Text('${StaffAuth.fullName} (${StaffAuth.role})'),
+                    Text(StaffAuth.accountLabel),
                 leading: Icon(Icons.logout),
                 onPressed: (context) async {
                   Navigator.of(context).popUntil((route) => route.isFirst);
