@@ -63,9 +63,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget build(BuildContext context) {
     super.build(context);
     final home = Obx(() {
+      final isLab = StaffAuth.isLab;
       final isIncomingOnly = bind.isIncomingOnly();
       // Lab devices keep the right pane for the lab name even in incoming-only builds.
-      final showRight = !isIncomingOnly || StaffAuth.isLab;
+      final showRight = !isIncomingOnly || isLab;
+      if (isLab) {
+        // RTL: the lab-name pane leads (visual right), the ID/password card follows.
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: buildRightPane(context)),
+            const VerticalDivider(width: 1),
+            buildLeftPane(context),
+          ],
+        );
+      }
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -220,7 +232,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ? (MyTheme.isPardis ? Colors.transparent : PdTokens.surface(context))
         : Theme.of(context).scaffoldBackgroundColor;
     if (StaffAuth.isLab) {
-      return Container(color: surface, child: const LabNamePane());
+      // Keep the service status/start control: without it a stopped service
+      // leaves the one-time password at "-" with no way to recover.
+      return Container(
+        color: surface,
+        child: Column(children: [
+          const Expanded(child: LabNamePane()),
+          const Divider(height: 1),
+          const OnlineStatusWidget(),
+        ]),
+      );
     }
     return Container(
       color: surface,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/staff_auth.dart';
@@ -15,7 +14,7 @@ class LabNamePane extends StatelessWidget {
     final accent = PdTokens.accent(context);
     final muted = PdTokens.muted(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Obx(() => Center(
+    return Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
             child: Column(
@@ -125,6 +124,6 @@ class LabNamePane extends StatelessWidget {
               ],
             ),
           ),
-        ));
+        );
   }
 }

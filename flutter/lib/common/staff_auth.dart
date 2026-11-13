@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 
 // Staff-edition login. Parsipol staff sign in with a password; lab users sign in
@@ -44,6 +45,20 @@ class StaffAuth {
     helpToken = bind.mainGetLocalOption(key: _kHelpTokenOption);
     helpAdminName = bind.mainGetLocalOption(key: _kHelpAdminOption);
     loggedIn.value = username.isNotEmpty;
+    if (mode == 'lab') _ensureLabOtp();
+  }
+
+  // Support staff connect with the one-time password, so a lab device must
+  // never stay in a mode that hides it (permanent-only or click-approve).
+  static Future<void> _ensureLabOtp() async {
+    if (bind.mainGetOptionSync(key: kOptionVerificationMethod) ==
+        'use-permanent-password') {
+      await bind.mainSetOption(
+          key: kOptionVerificationMethod, value: 'use-both-passwords');
+    }
+    if (bind.mainGetOptionSync(key: kOptionApproveMode) == 'click') {
+      await bind.mainSetOption(key: kOptionApproveMode, value: 'both');
+    }
   }
 
   // Human-readable identity shown in Settings / About.
@@ -109,6 +124,7 @@ class StaffAuth {
         labName = fullName;
         helpToken = '';
         helpAdminName = '';
+        await _ensureLabOtp();
         await _persist();
         loggedIn.value = true;
         return null;
