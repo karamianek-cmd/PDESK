@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:get/get.dart';
@@ -32,6 +33,11 @@ class StaffAuth {
   static String helpToken = '';
   static String helpAdminName = '';
 
+  // Presence heartbeat so the super-admin can see who is online and labs can see
+  // which staff are available. Staff beat with their help token, labs with Lab ID.
+  static Timer? _presenceTimer;
+  static const _presencePeriod = Duration(seconds: 60);
+
   static bool get isLab => loggedIn.value && mode == 'lab';
   static bool get isStaff => loggedIn.value && mode == 'staff';
 
@@ -46,6 +52,7 @@ class StaffAuth {
     helpAdminName = bind.mainGetLocalOption(key: _kHelpAdminOption);
     loggedIn.value = username.isNotEmpty;
     if (isLab) _ensureLabOtp();
+    if (loggedIn.value) _startPresence();
   }
 
   // Lab support needs a running service with one-time passwords enabled.
@@ -62,6 +69,36 @@ class StaffAuth {
     if (bind.mainGetOptionSync(key: kOptionStopService) == 'Y') {
       await bind.mainSetOption(key: kOptionStopService, value: '');
     }
+  }
+
+  static void _startPresence() {
+    _presenceTimer?.cancel();
+    _presenceBeat();
+    _presenceTimer = Timer.periodic(_presencePeriod, (_) => _presenceBeat());
+  }
+
+  static void _stopPresence() {
+    _presenceTimer?.cancel();
+    _presenceTimer = null;
+  }
+
+  static Future<void> _presenceBeat() async {
+    if (!loggedIn.value) return;
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    Map<String, dynamic> body = {};
+    if (isStaff && helpToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $helpToken';
+    } else if (isLab && labId.isNotEmpty) {
+      body = {'lab_id': labId};
+    } else {
+      return;
+    }
+    try {
+      await http
+          .post(Uri.parse('$_kBase/presence/beat'),
+              headers: headers, body: jsonEncode(body))
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {}
   }
 
   // Human-readable identity shown in Settings / About.
@@ -96,6 +133,7 @@ class StaffAuth {
         helpAdminName = (data['admin_username'] as String?) ?? user;
         await _persist();
         loggedIn.value = true;
+        _startPresence();
         return null;
       }
       if (r.statusCode == 401) return 'Invalid username or password';
@@ -130,6 +168,7 @@ class StaffAuth {
         await _persist();
         await _ensureLabOtp();
         loggedIn.value = true;
+        _startPresence();
         return null;
       }
       if (r.statusCode == 400) return 'Invalid Lab ID';
@@ -152,6 +191,7 @@ class StaffAuth {
   }
 
   static Future<void> logout() async {
+    _stopPresence();
     username = '';
     fullName = '';
     role = '';
@@ -169,18 +209,27 @@ class StaffAuth {
 class StaffEntry {
   final String username;
   final String fullName;
-  const StaffEntry(this.username, this.fullName);
+  final bool online;
+  const StaffEntry(this.username, this.fullName, {this.online = false});
 
   String get displayName => fullName.isNotEmpty ? fullName : username;
 }
 
-// Cached staff directory for the support picker.
+// Cached staff directory for the support picker. The short TTL keeps the online
+// flags fresh each time the picker opens without refetching on every rebuild.
 class StaffDirectory {
   static List<StaffEntry>? _cache;
+  static DateTime? _cachedAt;
+  static const _ttl = Duration(seconds: 30);
 
   static Future<List<StaffEntry>> load() async {
     final cached = _cache;
-    if (cached != null) return cached;
+    final at = _cachedAt;
+    if (cached != null &&
+        at != null &&
+        DateTime.now().difference(at) < _ttl) {
+      return cached;
+    }
     final r = await http
         .get(Uri.parse('${StaffAuth._kBase}/staff-list'))
         .timeout(const Duration(seconds: 30));
@@ -190,10 +239,12 @@ class StaffDirectory {
     }
     final staff = (data['staff'] as List<dynamic>)
         .map((e) => StaffEntry((e['username'] as String?) ?? '',
-            (e['full_name'] as String?) ?? ''))
+            (e['full_name'] as String?) ?? '',
+            online: e['online'] == true))
         .where((e) => e.username.isNotEmpty)
         .toList();
     _cache = staff;
+    _cachedAt = DateTime.now();
     return staff;
   }
 }

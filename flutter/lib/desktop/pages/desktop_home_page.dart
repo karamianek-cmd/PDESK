@@ -53,6 +53,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsCanRecordAudio = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
+  bool _installRevealed = false;
 
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
@@ -147,6 +148,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   _updateWindowSize();
                 });
               }
+            }
+            if (isWindows && !bind.mainIsInstalled()) {
+              Future.delayed(Duration(milliseconds: 300), _revealInstallCard);
             }
             return data.data!;
           } else {
@@ -1010,6 +1014,19 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       });
     }
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  // On a short or scaled screen the window is clamped to the work area, so the
+  // install card (last in the left column) can fall below the fold. Bring it
+  // into view once on first run so its Install button is always reachable.
+  void _revealInstallCard() {
+    if (_installRevealed || !mounted) return;
+    if (bind.isDisableInstallation() || bind.mainIsInstalled()) return;
+    if (!_leftPaneScrollController.hasClients) return;
+    final pos = _leftPaneScrollController.position;
+    if (pos.maxScrollExtent <= 0) return;
+    _installRevealed = true;
+    _leftPaneScrollController.jumpTo(pos.maxScrollExtent);
   }
 
   _updateWindowSize() {

@@ -706,7 +706,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   Widget getBodyForMobile() {
     return Container(
         color: MyTheme.canvasColor,
-        child: Stack(children: () {
+        // Canvas offsets are measured from the left edge; under RTL the default
+        // topStart alignment would anchor the painters at the right edge.
+        child: Stack(alignment: Alignment.topLeft, children: () {
           final paints = [
             ImagePaint(ffiModel: gFFI.ffiModel),
             Positioned(
@@ -1372,10 +1374,18 @@ void showOptions(
             viewStyle.value,
             e.onChanged != null
                 ? (v) {
+                    // A tap on the selected fit style drops any pinch zoom.
+                    if (v == null) {
+                      if (e.value != kRemoteViewStyleCustom) {
+                        gFFI.canvasModel.reset();
+                      }
+                      return;
+                    }
                     e.onChanged?.call(v);
-                    if (v != null) viewStyle.value = v;
+                    viewStyle.value = v;
                   }
-                : null)),
+                : null,
+            toggleable: true)),
       // Show custom scale controls when custom view style is selected
       Obx(() => viewStyle.value == kRemoteViewStyleCustom
           ? MobileCustomScaleControls(ffi: gFFI)

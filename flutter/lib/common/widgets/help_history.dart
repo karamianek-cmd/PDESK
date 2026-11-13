@@ -24,8 +24,8 @@ class _Tracked {
 /// open, and when it closes. If the app quits, the server closes the session
 /// itself at the last report.
 class HelpSessionTracker {
-  static const _period = Duration(seconds: 20);
-  static const _openGrace = Duration(seconds: 90);
+  static const _period = Duration(seconds: 5);
+  static const _openGrace = Duration(seconds: 45);
   static final List<_Tracked> _active = [];
   static Timer? _timer;
 
@@ -328,6 +328,8 @@ class _HistoryTile extends StatelessWidget {
     final name = (item['name'] ?? '') as String;
     final open = item['open'] == true;
     final note = (item['admin_note'] ?? '') as String;
+    final labName = (item['lab_name'] ?? '') as String;
+    final labId = item['lab_id'] as int? ?? 0;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
@@ -364,6 +366,13 @@ class _HistoryTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         textDirection: TextDirection.ltr,
                         style: TextStyle(fontSize: 12, color: muted)),
+                    if (labName.isNotEmpty || labId > 0)
+                      Text(
+                          '${translate('Lab')}: $labName'
+                          '${labId > 0 ? ' ($labId)' : ''}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: muted)),
                     if (note.isNotEmpty)
                       Text(note,
                           maxLines: 1,
@@ -510,6 +519,10 @@ class _HistoryEntryDialogState extends State<_HistoryEntryDialog> {
               if (widget.justEnded) row('Device name', name),
               row('ID', '${it['id']}', ltr: true),
               row('IP', '${it['ip']}', ltr: true),
+              if (((it['lab_name'] ?? '') as String).isNotEmpty)
+                row('Lab name', '${it['lab_name']}'),
+              if ((it['lab_id'] as int? ?? 0) > 0)
+                row('Lab ID', '${it['lab_id']}', ltr: true),
               row('Requested at', when('requested_at')),
               row('Accepted at', when('accepted_at')),
               row(

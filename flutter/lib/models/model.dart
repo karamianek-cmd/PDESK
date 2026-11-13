@@ -2387,6 +2387,13 @@ class CanvasModel with ChangeNotifier {
         //   https://github.com/user-attachments/assets/95f047f2-7f47-4a36-8113-5023989a0c81
         h = h - mediaData.padding.top;
       }
+      // The bottom toolbar (a row of icon buttons inside a SafeArea) also covers
+      // the canvas, except where the soft keyboard is already over it.
+      h -= max(
+          kMinInteractiveDimension +
+              mediaData.padding.bottom -
+              mediaData.viewInsets.bottom,
+          0);
     }
     return Size(w < 0 ? 0 : w, h < 0 ? 0 : h);
   }

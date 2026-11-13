@@ -967,5 +967,10 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Support requests and history", "درخواست‌های پشتیبانی و تاریخچه"),
         ("Admin session expired", "نشست مدیریت پایان یافته است"),
         ("Login again", "ورود دوباره"),
+        ("Lab name", "نام آزمایشگاه"),
+        ("Online", "آنلاین"),
+        ("Offline", "آفلاین"),
+        ("Who is online", "چه کسانی آنلاین هستند"),
+        ("No one is online", "کسی آنلاین نیست"),
     ].iter().cloned().collect();
 }

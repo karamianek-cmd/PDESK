@@ -33,6 +33,12 @@ class HelpApi {
   static String? token;
   static String? adminName;
 
+  // The only account that may read every admin's history and the online list.
+  // The server enforces this too; the client check just hides the section.
+  static const superAdmin = 'm.ghiasi';
+  static bool get isSuperAdmin =>
+      (adminName ?? '').toLowerCase() == superAdmin;
+
   static Future<HelpResult> _call(String method, String path,
       {Map<String, dynamic>? body, bool auth = false}) async {
     try {
@@ -61,13 +67,15 @@ class HelpApi {
   // targetStaff: null broadcasts to every admin; a username routes the request
   // only to that ParsiPol staff member.
   static Future<HelpResult> request(String id, String name, String password,
-          {String? note, String? targetStaff}) =>
+          {String? note, String? targetStaff, int? labId, String? labName}) =>
       _call('POST', '/request', body: {
         'id': id,
         'name': name,
         'password': password,
         if (note != null) 'note': note,
         if (targetStaff != null) 'target_staff': targetStaff,
+        if (labId != null) 'lab_id': labId,
+        if (labName != null) 'lab_name': labName,
       });
 
   // Staff sign in through StaffAuth; the server mints their help-admin token,
@@ -122,6 +130,9 @@ class HelpApi {
   }
 
   static Future<HelpResult> list() => _call('GET', '/list', auth: true);
+
+  static Future<HelpResult> presence() =>
+      _call('GET', '/presence', auth: true);
 
   static Future<HelpResult> claim(String id) =>
       _call('POST', '/claim', body: {'id': id}, auth: true);
@@ -261,7 +272,10 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
     _lastId = _id;
     _lastPw = _password;
     final r = await HelpApi.request(_lastId, name, _lastPw,
-        note: note, targetStaff: _target.isEmpty ? null : _target);
+        note: note,
+        targetStaff: _target.isEmpty ? null : _target,
+        labId: StaffAuth.isLab ? int.tryParse(StaffAuth.labId) : null,
+        labName: StaffAuth.isLab ? StaffAuth.labName : null);
     if (!r.ok) {
       showToast(translate('Cannot reach the server'));
       return false;
@@ -285,7 +299,9 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
     _lastId = _id;
     _lastPw = pw;
     final r = await HelpApi.request(_lastId, name, pw,
-        targetStaff: _target.isEmpty ? null : _target);
+        targetStaff: _target.isEmpty ? null : _target,
+        labId: StaffAuth.isLab ? int.tryParse(StaffAuth.labId) : null,
+        labName: StaffAuth.isLab ? StaffAuth.labName : null);
     if (!mounted) return;
     if (r.ok && r.data['status'] == 'claimed') {
       _finish(translate('Network admin is connecting'));
@@ -699,6 +715,12 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
               icon: const Icon(Icons.history_rounded, size: 18),
               label: Text(translate('History')),
             ),
+            if (HelpApi.isSuperAdmin)
+              ButtonSegment(
+                value: 2,
+                icon: const Icon(Icons.wifi_tethering_rounded, size: 18),
+                label: Text(translate('Who is online')),
+              ),
           ],
           selected: {_section},
           onSelectionChanged: (s) => setState(() => _section = s.first),
@@ -711,6 +733,7 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
             children: [
               _tickets(context),
               HelpHistoryView(key: _historyKey),
+              if (HelpApi.isSuperAdmin) const _PresenceView(),
             ],
           ),
         ),
@@ -768,6 +791,8 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
     final color = waitColor(wait);
     final first = priority == 1;
     final created = parseServerTime(it['created_at']);
+    final labName = (it['lab_name'] ?? '') as String;
+    final labId = it['lab_id'] as int? ?? 0;
     return Material(
       color: theme.cardColor,
       borderRadius: BorderRadius.circular(14),
@@ -833,6 +858,16 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
                     Text('${it['ip']}  ·  ${it['id']}',
                         textDirection: TextDirection.ltr,
                         style: TextStyle(fontSize: 12, color: muted)),
+                    if (labName.isNotEmpty || labId > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                            '${translate('Lab')}: $labName'
+                            '${labId > 0 ? ' ($labId)' : ''}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: muted)),
+                      ),
                     const SizedBox(height: 2),
                     Text(
                         '${translate('Waiting')}: ${formatDuration(context, wait)}'
@@ -1111,9 +1146,21 @@ class _StaffPickerDialogState extends State<_StaffPickerDialog> {
                                         size: 20,
                                         color: PdTokens.accent(context)),
                                   ),
-                                  title: Text(s.displayName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
+                                  title: Row(children: [
+                                    Flexible(
+                                      child: Text(s.displayName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis),
+                                    ),
+                                    if (s.online) ...[
+                                      const SizedBox(width: 6),
+                                      Tooltip(
+                                        message: translate('Online'),
+                                        child: const Icon(Icons.lightbulb,
+                                            size: 16, color: Colors.green),
+                                      ),
+                                    ],
+                                  ]),
                                   subtitle: Text(s.username,
                                       textDirection: TextDirection.ltr,
                                       style: TextStyle(
@@ -1131,6 +1178,177 @@ class _StaffPickerDialogState extends State<_StaffPickerDialog> {
             onPressed: () => Navigator.pop(context),
             child: Text(translate('Cancel'))),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------- who is online (super)
+
+// Super-admin only: which ParsiPol staff and labs are signed in and online now.
+class _PresenceView extends StatefulWidget {
+  const _PresenceView();
+
+  @override
+  State<_PresenceView> createState() => _PresenceViewState();
+}
+
+class _PresenceViewState extends State<_PresenceView> {
+  List<Map<String, dynamic>> _staff = [];
+  List<Map<String, dynamic>> _labs = [];
+  bool _loading = false;
+  bool _failed = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    final r = await HelpApi.presence();
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _failed = !r.ok;
+      if (!r.ok) return;
+      _staff = (r.data['staff'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      _labs = (r.data['labs'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      // Online first, then by name, so available people are easy to spot.
+      int cmp(Map<String, dynamic> a, Map<String, dynamic> b, String key) {
+        final oa = a['online'] == true, ob = b['online'] == true;
+        if (oa != ob) return oa ? -1 : 1;
+        return ((a[key] ?? '') as String).compareTo((b[key] ?? '') as String);
+      }
+
+      _staff.sort((a, b) => cmp(a, b, 'full_name'));
+      _labs.sort((a, b) => cmp(a, b, 'name'));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
+    final f = TehranFormat(Directionality.of(context) == TextDirection.rtl);
+    final staffOnline = _staff.where((e) => e['online'] == true).length;
+    final labsOnline = _labs.where((e) => e['online'] == true).length;
+
+    if (_failed && _staff.isEmpty && _labs.isEmpty) {
+      return Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.cloud_off_rounded, size: 40, color: muted),
+          const SizedBox(height: 8),
+          Text(translate('Cannot reach the server'),
+              style: TextStyle(color: muted)),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: _load, child: Text(translate('Retry'))),
+        ]),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(children: [
+          Icon(Icons.wifi_tethering_rounded, color: theme.primaryColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(translate('Who is online'),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          ),
+          if (_loading)
+            const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2))
+          else
+            IconButton(
+                tooltip: translate('Refresh'),
+                onPressed: _load,
+                icon: const Icon(Icons.refresh, size: 20)),
+        ]),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ListView(
+            children: [
+              if (staffOnline == 0 && labsOnline == 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(translate('No one is online'),
+                      style: TextStyle(fontSize: 13, color: muted)),
+                ),
+              _sectionHeader(
+                  translate('Parsipol staff'), staffOnline, f, muted),
+              ..._staff.map((e) => _presenceTile(
+                  (e['full_name'] ?? '') as String,
+                  (e['username'] ?? '') as String,
+                  e['online'] == true,
+                  muted)),
+              const SizedBox(height: 12),
+              _sectionHeader(translate('Labs'), labsOnline, f, muted),
+              ..._labs.map((e) => _presenceTile((e['name'] ?? '') as String,
+                  '${e['id'] ?? ''}', e['online'] == true, muted)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(
+      String title, int online, TehranFormat f, Color? muted) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
+      child: Row(children: [
+        Expanded(
+          child: Text(title,
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w700, color: muted)),
+        ),
+        Text('${f.number(online)} ${translate('Online')}',
+            style: const TextStyle(
+                fontSize: 12,
+                color: Colors.green,
+                fontWeight: FontWeight.w600)),
+      ]),
+    );
+  }
+
+  Widget _presenceTile(
+      String title, String subtitle, bool online, Color? muted) {
+    return ListTile(
+      dense: true,
+      leading: Icon(online ? Icons.lightbulb : Icons.lightbulb_outline,
+          color: online ? Colors.green : muted, size: 20),
+      title: Text(title.isEmpty ? subtitle : title,
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: title.isEmpty
+          ? null
+          : Text(subtitle,
+              textDirection: TextDirection.ltr,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: muted)),
+      trailing: Text(translate(online ? 'Online' : 'Offline'),
+          style: TextStyle(
+              fontSize: 12,
+              color: online ? Colors.green : muted,
+              fontWeight: FontWeight.w600)),
     );
   }
 }

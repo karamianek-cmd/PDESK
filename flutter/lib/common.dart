@@ -1663,7 +1663,7 @@ class AndroidPermissionManager {
 
 RadioListTile<T> getRadio<T>(
     Widget title, T toValue, T curValue, ValueChanged<T?>? onChange,
-    {bool? dense}) {
+    {bool? dense, bool toggleable = false}) {
   return RadioListTile<T>(
     visualDensity: VisualDensity.compact,
     controlAffinity: ListTileControlAffinity.trailing,
@@ -1672,6 +1672,7 @@ RadioListTile<T> getRadio<T>(
     groupValue: curValue,
     onChanged: onChange,
     dense: dense,
+    toggleable: toggleable,
   );
 }
 
