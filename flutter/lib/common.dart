@@ -16,6 +16,7 @@ import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
+import 'package:flutter_hbb/utils/window_geometry.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:get/get_rx/src/rx_workers/utils/debouncer.dart';
@@ -2194,11 +2195,28 @@ Future<bool> restoreWindowPosition(WindowType type,
 
   switch (type) {
     case WindowType.Main:
+      var mainSize = size;
+      var mainOffset = offsetLeftTop;
+      if (isWindows) {
+        final screens = await window_size.getScreenList();
+        if (screens.isNotEmpty) {
+          final workAreas =
+              screens.map((screen) => screen.visibleFrame).toList();
+          final anchor = offsetLeftTop ?? workAreas.first.topLeft;
+          final fitted = fitWindowBoundsToWorkAreas(
+              Rect.fromLTWH(anchor.dx, anchor.dy, size.width, size.height),
+              workAreas);
+          if (fitted != null) {
+            mainSize = fitted.size;
+            if (offsetLeftTop != null) mainOffset = fitted.topLeft;
+          }
+        }
+      }
       restorePos() async {
-        if (offsetLeftTop == null) {
+        if (mainOffset == null) {
           await windowManager.center();
         } else {
-          await windowManager.setPosition(offsetLeftTop,
+          await windowManager.setPosition(mainOffset,
               ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
         }
       }
@@ -2216,12 +2234,12 @@ Future<bool> restoreWindowPosition(WindowType type,
             // The window belongs to the left monitor, but if it is moved a little to the right, it will belong to the right monitor.
             // After restoring, the size will be incorrect.
             // See known issue in https://github.com/rustdesk/rustdesk/pull/9840
-            await windowManager.setSize(size,
+            await windowManager.setSize(mainSize,
                 ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
           }
           await restorePos();
           if (storeSize) {
-            await windowManager.setSize(size,
+            await windowManager.setSize(mainSize,
                 ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
           }
         } else {

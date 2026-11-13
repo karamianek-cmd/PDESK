@@ -205,7 +205,8 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                     children: [
                       Icon(Icons.info_outline_rounded, size: 32)
                           .marginOnly(right: 16),
-                      Column(
+                      Flexible(
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(translate('agreement_tip'))
@@ -219,26 +220,33 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                               child: Row(children: [
                                 Icon(Icons.launch_outlined, size: 16)
                                     .marginOnly(right: 5),
-                                Text(
-                                  translate('End-user license agreement'),
-                                  style: const TextStyle(
-                                      decoration: TextDecoration.underline),
+                                Flexible(
+                                  child: Text(
+                                    translate('End-user license agreement'),
+                                    style: const TextStyle(
+                                        decoration: TextDecoration.underline),
+                                  ),
                                 )
                               ]),
                             ),
                           ),
                         ],
+                      ),
                       )
                     ],
                   )).marginSymmetric(vertical: 2 * em),
-              Row(
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 8,
                 children: [
-                  Expanded(
-                    // NOT use Offstage to wrap LinearProgressIndicator
-                    child: Obx(() => showProgress.value
-                        ? LinearProgressIndicator().marginOnly(right: 10)
-                        : Offstage()),
-                  ),
+                  // NOT use Offstage to wrap LinearProgressIndicator
+                  Obx(() => showProgress.value
+                      ? SizedBox(
+                          width: 120,
+                          child: LinearProgressIndicator()
+                              .marginOnly(right: 10))
+                      : Offstage()),
                   Obx(
                     () => OutlinedButton.icon(
                       icon: Icon(Icons.close_rounded, size: 16),

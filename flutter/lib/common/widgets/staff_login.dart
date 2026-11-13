@@ -89,6 +89,21 @@ class _StaffLoginPageState extends State<StaffLoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tint = PdTokens.accent(context).withOpacity(0.06);
+    // The app-wide hover colour is an opaque grey; keep it off this page.
+    return Theme(
+      data: theme.copyWith(
+        textTheme: theme.textTheme.apply(fontFamily: 'Shabnam'),
+        hoverColor: tint,
+        highlightColor: tint,
+        splashColor: tint,
+      ),
+      child: Builder(builder: _page),
+    );
+  }
+
+  Widget _page(BuildContext context) {
     return Scaffold(
       body: Stack(children: [
         const Positioned(
@@ -123,7 +138,6 @@ class _StaffLoginPageState extends State<StaffLoginPage> {
   }
 
   Widget _header(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -132,12 +146,6 @@ class _StaffLoginPageState extends State<StaffLoginPage> {
         Text(translate('Staff login'),
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(translate('Staff edition'),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 13,
-                color: theme.textTheme.bodySmall?.color?.withOpacity(0.7))),
       ],
     );
   }
@@ -313,8 +321,8 @@ class _StaffLoginPageState extends State<StaffLoginPage> {
   }
 }
 
-// Large entrance tile: filled accent for staff, outlined surface for labs.
-class _EntranceButton extends StatelessWidget {
+// Large entrance tile: solid accent for staff, outlined surface for labs.
+class _EntranceButton extends StatefulWidget {
   final IconData icon;
   final String title;
   final String subtitle;
@@ -328,81 +336,108 @@ class _EntranceButton extends StatelessWidget {
       required this.onTap});
 
   @override
+  State<_EntranceButton> createState() => _EntranceButtonState();
+}
+
+class _EntranceButtonState extends State<_EntranceButton> {
+  bool _hover = false;
+  bool _focus = false;
+
+  @override
   Widget build(BuildContext context) {
+    final filled = widget.filled;
     final accent = PdTokens.accent(context);
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final active = _hover || _focus;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
     final fg =
         filled ? Colors.white : Theme.of(context).textTheme.titleLarge?.color;
-    final sub = filled
-        ? Colors.white.withOpacity(0.82)
-        : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.75);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: filled
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: dark
-                        ? [const Color(0xFF3D6FD1), const Color(0xFF2B4E9B)]
-                        : MyTheme.isPardis
-                            ? [const Color(0xFF159A93), const Color(0xFF0E6B66)]
-                            : [accent, Color.lerp(accent, Colors.black, 0.22)!])
-                : null,
-            color: filled ? null : PdTokens.surface(context),
-            border: Border.all(
-                color: filled ? Colors.transparent : PdTokens.border(context),
-                width: 1.2),
-            boxShadow: filled
-                ? [
-                    BoxShadow(
-                        color: accent.withOpacity(0.30),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6))
-                  ]
-                : null,
+    final sub = filled ? Colors.white.withOpacity(0.85) : PdTokens.muted(context);
+    final radius = BorderRadius.circular(16);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        color: filled
+            ? (active ? Color.lerp(accent, Colors.black, 0.12)! : accent)
+            : (active
+                ? Color.alphaBlend(
+                    accent.withOpacity(0.05), PdTokens.surface(context))
+                : PdTokens.surface(context)),
+        border: Border.all(
+            color: filled
+                ? Colors.transparent
+                : (active
+                    ? accent.withOpacity(0.55)
+                    : PdTokens.border(context)),
+            width: 1.2),
+        boxShadow: [
+          BoxShadow(
+              color: accent.withOpacity(filled
+                  ? (active ? 0.30 : 0.18)
+                  : (active ? 0.12 : 0.0)),
+              blurRadius: active ? 20 : 12,
+              offset: Offset(0, active ? 8 : 4)),
+        ],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: widget.onTap,
+          onHover: (v) => setState(() => _hover = v),
+          onFocusChange: (v) => setState(() => _focus = v),
+          borderRadius: radius,
+          hoverColor: Colors.transparent,
+          focusColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashColor: filled
+              ? Colors.white.withOpacity(0.14)
+              : accent.withOpacity(0.08),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(13),
+                  color: filled
+                      ? Colors.white.withOpacity(0.16)
+                      : accent.withOpacity(0.10),
+                ),
+                child: Icon(widget.icon,
+                    size: 24, color: filled ? Colors.white : accent),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.title,
+                        style: TextStyle(
+                            fontFamily: 'Shabnam',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: fg)),
+                    const SizedBox(height: 3),
+                    Text(widget.subtitle,
+                        style: TextStyle(
+                            fontFamily: 'Shabnam', fontSize: 12.5, color: sub)),
+                  ],
+                ),
+              ),
+              AnimatedSlide(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                offset: Offset(active ? (rtl ? -0.18 : 0.18) : 0, 0),
+                child: Icon(Icons.chevron_right_rounded,
+                    size: 22,
+                    color: filled
+                        ? Colors.white.withOpacity(0.85)
+                        : (active ? accent : PdTokens.muted(context))),
+              ),
+            ]),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Row(children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: filled
-                    ? Colors.white.withOpacity(0.16)
-                    : accent.withOpacity(0.12),
-              ),
-              child:
-                  Icon(icon, size: 24, color: filled ? Colors.white : accent),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 16.5,
-                          fontWeight: FontWeight.w700,
-                          color: fg)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: TextStyle(fontSize: 12.5, color: sub)),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded,
-                size: 22,
-                color: filled
-                    ? Colors.white.withOpacity(0.8)
-                    : PdTokens.muted(context)),
-          ]),
         ),
       ),
     );

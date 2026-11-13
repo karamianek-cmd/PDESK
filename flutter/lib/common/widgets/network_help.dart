@@ -498,13 +498,14 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
       return;
     }
     final name = (item['name'] ?? '') as String;
+    final sz = MediaQuery.of(context).size;
     final accept = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(name.isEmpty ? item['id'] as String : name),
         content: SizedBox(
-          width: 900,
-          height: 560,
+          width: sz.width < 940 ? sz.width - 80 : 900,
+          height: sz.height < 640 ? sz.height - 160 : 560,
           child: InteractiveViewer(
               maxScale: 5, child: Image.memory(bytes!, fit: BoxFit.contain)),
         ),

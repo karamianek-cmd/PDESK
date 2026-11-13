@@ -4,6 +4,7 @@
 #include <shobjidl_core.h>
 
 #include "resource.h"
+#include "win32_desktop.h"
 
 #include <cstdlib> // for getenv and _putenv
 #include <cstring> // for strcmp
@@ -171,11 +172,15 @@ bool Win32Window::CreateAndShow(const std::wstring& title,
   HMONITOR monitor = MonitorFromPoint(target_point, MONITOR_DEFAULTTONEAREST);
   UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
   double scale_factor = dpi / 96.0;
+  Point window_origin(origin.x, origin.y);
+  Size window_size(Scale(size.width, scale_factor),
+                   Scale(size.height, scale_factor));
+  Win32Desktop::FitToWorkArea(window_origin, window_size);
 
   HWND window = CreateWindow(
       window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
-      Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
-      Scale(size.width, scale_factor), Scale(size.height, scale_factor),
+      window_origin.x, window_origin.y,
+      window_size.width, window_size.height,
       nullptr, nullptr, GetModuleHandle(nullptr), this);
 
   if (!window) {

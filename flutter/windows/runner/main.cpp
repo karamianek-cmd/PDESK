@@ -168,9 +168,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   Win32Window::Point origin(workarea_origin.x + relative_origin.x, workarea_origin.y + relative_origin.y);
   Win32Window::Size size(800u, 600u);
 
-  // Fit the window to the monitor's work area.
-  Win32Desktop::FitToWorkArea(origin, size);
-
   std::wstring window_title;
   if (is_cm_page) {
     window_title = app_name + L" - Connection Manager";

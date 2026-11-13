@@ -393,7 +393,8 @@ void runInstallPage() async {
   await initEnv(kAppTypeMain);
   _runApp('', const InstallPage(), MyTheme.currentThemeMode());
   WindowOptions windowOptions =
-      getHiddenTitleBarWindowOptions(size: Size(800, 600), center: true);
+      getHiddenTitleBarWindowOptions(
+          size: isWindows ? null : Size(800, 600), center: true);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     windowManager.show();
     windowManager.focus();
