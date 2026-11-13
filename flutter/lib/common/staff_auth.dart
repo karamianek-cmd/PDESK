@@ -114,7 +114,7 @@ class StaffAuth {
         fullName = (data['lab_name'] as String?) ?? '';
         role = '';
         mode = 'lab';
-        this.labId = labId;
+        StaffAuth.labId = labId;
         labName = fullName;
         helpToken = '';
         helpAdminName = '';

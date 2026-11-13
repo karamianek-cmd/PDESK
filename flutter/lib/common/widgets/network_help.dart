@@ -4,7 +4,7 @@ import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common.dart' hide Dialog;
 import 'package:flutter_hbb/common/jalali.dart';
 import 'package:flutter_hbb/common/staff_auth.dart';
 import 'package:flutter_hbb/common/widgets/help_history.dart';
