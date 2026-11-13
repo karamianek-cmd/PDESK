@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_hbb/models/platform_model.dart';
 
 // Staff-edition login. Parsipol staff sign in with a password; lab users sign in
-// with their 4-digit Lab ID from a registered computer (the MAC is the credential).
+// with their 4-digit Lab ID alone.
 // The Parsipol server holds the directory service account and does the verification;
 // only the resulting identity is kept on this device, never a password.
 class StaffAuth {
@@ -57,15 +57,6 @@ class StaffAuth {
     return parts.join(' ');
   }
 
-  static Future<List<String>> macAddresses() async {
-    try {
-      final list = jsonDecode(bind.mainGetMacAddresses()) as List<dynamic>;
-      return list.map((e) => e.toString()).toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
   // Returns null on success, otherwise an error key for translate().
   static Future<String?> login(String user, String pass) async {
     try {
@@ -98,14 +89,14 @@ class StaffAuth {
     }
   }
 
-  // Lab login: only the 4-digit Lab ID is typed. The server accepts the login
-  // when one of this computer's MACs is a registered terminal for that lab.
-  static Future<String?> loginLab(String labId, List<String> macs) async {
+  // Lab login: the 4-digit Lab ID alone signs the device in; the server
+  // checks it against the active lab directory.
+  static Future<String?> loginLab(String labId) async {
     try {
       final r = await http
           .post(Uri.parse('$_kBase/lab-login'),
               headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({'lab_id': labId, 'macs': macs}))
+              body: jsonEncode({'lab_id': labId}))
           .timeout(const Duration(seconds: 40));
       final data =
           jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
@@ -123,12 +114,6 @@ class StaffAuth {
         return null;
       }
       if (r.statusCode == 400) return 'Invalid Lab ID';
-      if (r.statusCode == 401) {
-        return data['error'] == 'unregistered'
-            ? 'This computer is not registered for this lab'
-            : 'Invalid Lab ID';
-      }
-      if (r.statusCode == 403) return 'This account is disabled';
       if (r.statusCode == 429) return 'Too many attempts, try again later';
       return 'Cannot reach the staff server';
     } catch (_) {

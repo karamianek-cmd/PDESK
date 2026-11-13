@@ -79,16 +79,7 @@ class _StaffLoginPageState extends State<StaffLoginPage> {
       _busy = true;
       _error = '';
     });
-    final macs = await StaffAuth.macAddresses();
-    if (!mounted) return;
-    if (macs.isEmpty) {
-      setState(() {
-        _busy = false;
-        _error = translate('No network adapter found');
-      });
-      return;
-    }
-    final err = await StaffAuth.loginLab(id, macs);
+    final err = await StaffAuth.loginLab(id);
     if (!mounted) return;
     setState(() {
       _busy = false;

@@ -947,8 +947,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Select lab", "انتخاب آزمایشگاه"),
         ("Search labs", "جستجوی آزمایشگاه‌ها"),
         ("Select your lab", "لطفاً آزمایشگاه خود را انتخاب کنید"),
-        ("No network adapter found", "کارت شبکه‌ای یافت نشد"),
-        ("This computer is not registered for this lab", "این رایانه برای این آزمایشگاه ثبت نشده است"),
         ("Cannot load the lab list", "دریافت فهرست آزمایشگاه‌ها ممکن نشد"),
         ("Labs", "آزمایشگاه‌ها"),
         ("Lab ID", "شناسه آزمایشگاه"),
