@@ -239,7 +239,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: Column(children: [
           const Expanded(child: LabNamePane()),
           const Divider(height: 1),
-          const OnlineStatusWidget(),
+          const OnlineStatusWidget(showServiceActions: true),
         ]),
       );
     }

@@ -11,6 +11,9 @@ name: Build the flutter version of the RustDesk
       publish-update-metadata:
         type: boolean
         default: false
+      windows-only:
+        type: boolean
+        default: false
 env:
   SCITER_RUST_VERSION: '1.75'
   RUST_VERSION: '1.75'
@@ -291,6 +294,7 @@ jobs:
         path: ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
         if-no-files-found: error
   build-rustdesk-android:
+    if: ${{ !inputs.windows-only }}
     needs:
     - generate-bridge
     name: build rustdesk android apk ${{ matrix.job.target }}
@@ -427,7 +431,7 @@ jobs:
     needs:
     - build-rustdesk-android
     name: build rustdesk android universal apk
-    if: ${{ inputs.upload-artifact }}
+    if: ${{ inputs.upload-artifact && !inputs.windows-only }}
     runs-on: ubuntu-24.04
     env:
       reltype: release

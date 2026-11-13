@@ -45,11 +45,10 @@ class StaffAuth {
     helpToken = bind.mainGetLocalOption(key: _kHelpTokenOption);
     helpAdminName = bind.mainGetLocalOption(key: _kHelpAdminOption);
     loggedIn.value = username.isNotEmpty;
-    if (mode == 'lab') _ensureLabOtp();
+    if (isLab) _ensureLabOtp();
   }
 
-  // Support staff connect with the one-time password, so a lab device must
-  // never stay in a mode that hides it (permanent-only or click-approve).
+  // Lab support needs a running service with one-time passwords enabled.
   static Future<void> _ensureLabOtp() async {
     if (bind.mainGetOptionSync(key: kOptionVerificationMethod) ==
         'use-permanent-password') {
@@ -58,6 +57,10 @@ class StaffAuth {
     }
     if (bind.mainGetOptionSync(key: kOptionApproveMode) == 'click') {
       await bind.mainSetOption(key: kOptionApproveMode, value: 'both');
+    }
+    // Starting an installed Windows service can relaunch the application.
+    if (bind.mainGetOptionSync(key: kOptionStopService) == 'Y') {
+      await bind.mainSetOption(key: kOptionStopService, value: '');
     }
   }
 
@@ -124,8 +127,8 @@ class StaffAuth {
         labName = fullName;
         helpToken = '';
         helpAdminName = '';
-        await _ensureLabOtp();
         await _persist();
+        await _ensureLabOtp();
         loggedIn.value = true;
         return null;
       }

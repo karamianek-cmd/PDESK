@@ -23,10 +23,12 @@ import '../../models/platform_model.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 
 class OnlineStatusWidget extends StatefulWidget {
-  const OnlineStatusWidget({Key? key, this.onSvcStatusChanged})
+  const OnlineStatusWidget(
+      {Key? key, this.onSvcStatusChanged, this.showServiceActions = false})
       : super(key: key);
 
   final VoidCallback? onSvcStatusChanged;
+  final bool showServiceActions;
 
   @override
   State<OnlineStatusWidget> createState() => _OnlineStatusWidgetState();
@@ -66,6 +68,50 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.showServiceActions) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 44),
+        child: Obx(() {
+          final stopped = _svcStopped.value;
+          final status = stateGlobal.svcStatus.value;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Icon(Icons.circle,
+                        size: 10,
+                        color: stopped || status == SvcStatus.connecting
+                            ? kColorWarn
+                            : status == SvcStatus.ready
+                                ? const Color(0xFF32BEA6)
+                                : const Color(0xFFE04F5F)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildConnStatusMsg()),
+                ],
+              ),
+              if (stopped || status == SvcStatus.notReady)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: ElevatedButton.icon(
+                      onPressed: () => start_service(true),
+                      icon: const Icon(Icons.power_settings_new),
+                      label: Text(translate(stopped ? 'Start service' : 'Retry')),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }),
+      );
+    }
     final isIncomingOnly = bind.isIncomingOnly();
     startServiceWidget() => Offstage(
           offstage: !_svcStopped.value,
