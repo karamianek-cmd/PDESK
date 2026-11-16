@@ -3080,7 +3080,7 @@ impl Connection {
             #[cfg(feature = "flutter")]
             let staff_approved = password::approve_mode() == ApproveMode::Click
                 && self.is_remote()
-                && crate::staff_support::verify_login_ticket(&lr, &self.hash.challenge).await;
+                && crate::staff_support::verify_login_ticket(&self.lr, &self.hash.challenge).await;
             #[cfg(not(feature = "flutter"))]
             let staff_approved = false;
 

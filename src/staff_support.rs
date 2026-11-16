@@ -3,8 +3,8 @@ use base::{
     config::keys,
     message_proto::{message, LoginRequest, Message},
 };
-use base::message_proto::{ConnType, PeerInfo};
-use hbb_common::{config::LocalConfig, log};
+use base::message_proto::PeerInfo;
+use hbb_common::{config::LocalConfig, log, rendezvous_proto::ConnType};
 use serde_json::{json, Map, Value};
 
 const PASSWORD_KIND: &str = "parsidesk_permanent_password";
@@ -20,7 +20,7 @@ pub(crate) fn set_password_kind(pi: &mut PeerInfo, permanent: bool) {
 }
 
 fn password_preference(staff: bool, id: &str, conn_type: ConnType, pi: &PeerInfo) -> Option<bool> {
-    if !staff || conn_type != ConnType::DEFAULT || !numeric_peer(id) {
+    if !staff || conn_type != ConnType::DEFAULT_CONN || !numeric_peer(id) {
         return None;
     }
     let additions: Value = serde_json::from_str(&pi.platform_additions).ok()?;
@@ -185,25 +185,25 @@ mod tests {
     fn staff_remembers_only_host_confirmed_permanent_passwords() {
         let mut pi = PeerInfo::new();
         assert_eq!(
-            password_preference(true, "123456789", ConnType::DEFAULT, &pi),
+            password_preference(true, "123456789", ConnType::DEFAULT_CONN, &pi),
             None
         );
         set_password_kind(&mut pi, true);
         assert_eq!(
-            password_preference(true, "123456789", ConnType::DEFAULT, &pi),
+            password_preference(true, "123456789", ConnType::DEFAULT_CONN, &pi),
             Some(true)
         );
         set_password_kind(&mut pi, false);
         assert_eq!(
-            password_preference(true, "123456789", ConnType::DEFAULT, &pi),
+            password_preference(true, "123456789", ConnType::DEFAULT_CONN, &pi),
             Some(false)
         );
         assert_eq!(
-            password_preference(false, "123456789", ConnType::DEFAULT, &pi),
+            password_preference(false, "123456789", ConnType::DEFAULT_CONN, &pi),
             None
         );
         assert_eq!(
-            password_preference(true, "192.168.1.1", ConnType::DEFAULT, &pi),
+            password_preference(true, "192.168.1.1", ConnType::DEFAULT_CONN, &pi),
             None
         );
     }
