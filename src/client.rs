@@ -2525,6 +2525,7 @@ impl AudioHandler {
             };
             let channels = self.channels;
             let n = decoded_frames * channels as usize;
+            crate::audio_echo_suppression::note_remote_audio(&buffer[0..n]);
             #[cfg(not(target_os = "linux"))]
             {
                 let config = DecodedAudioConfig {
@@ -3667,6 +3668,12 @@ impl LoginConfigHandler {
         };
         let mut config = self.load_config();
         config.info = serde;
+        #[cfg(feature = "flutter")]
+        let staff_remember = crate::staff_support::remember_password(&self.id, self.conn_type, pi);
+        #[cfg(feature = "flutter")]
+        if staff_remember == Some(true) {
+            self.remember = true;
+        }
         let password = self.password.clone();
         let password0 = config.password.clone();
         let remember = self.remember;
@@ -3691,6 +3698,10 @@ impl LoginConfigHandler {
                 log::debug!("remove password of {}", self.id);
             }
         }
+        #[cfg(feature = "flutter")]
+        if staff_remember == Some(false) {
+            config.password = password0;
+        }
         if let Some((_, b, c)) = self.other_server.as_ref() {
             if b != PUBLIC_SERVER {
                 config
@@ -3709,6 +3720,7 @@ impl LoginConfigHandler {
         {
             // sync connected password to personal ab automatically if it is not shared password
             if !config.password.is_empty()
+                && staff_remember.is_none()
                 && !self.password_source.is_shared_ab(&password, &hash)
                 && !self.password_source.is_personal_ab(&password)
             {
@@ -4820,6 +4832,11 @@ async fn send_login(
         .unwrap()
         .create_login_msg(os_username, os_password, password);
     let msg_out = trust.login(msg_out).await?;
+    #[cfg(feature = "flutter")]
+    let msg_out = {
+        let challenge = lc.read().unwrap().hash.challenge.clone();
+        crate::staff_support::add_login_ticket(msg_out, &challenge).await
+    };
     peer.send(&msg_out).await
 }
 

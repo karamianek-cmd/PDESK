@@ -33,8 +33,7 @@ class HelpApi {
   static String? token;
   static String? adminName;
 
-  // The only account that may read every admin's history and the online list.
-  // The server enforces this too; the client check just hides the section.
+  // The server enforces cross-staff history and feature-management access.
   static const superAdmin = 'm.ghiasi';
   static bool get isSuperAdmin =>
       (adminName ?? '').toLowerCase() == superAdmin;
@@ -100,6 +99,13 @@ class HelpApi {
       _call('POST', '/history/list',
           body: {'q': q, 'before': before, 'limit': 50}, auth: true);
 
+  static Future<HelpResult> historyStart(
+          String id, String sessionKey, String name) =>
+      _call('POST', '/history/start',
+              body: {'id': id, 'session_key': sessionKey, 'name': name}, auth: true)
+          .timeout(const Duration(seconds: 15),
+              onTimeout: () => HelpResult(false, 0, {}));
+
   static Future<HelpResult> historyAlive(List<int> ids) =>
       _call('POST', '/history/alive', body: {'ids': ids}, auth: true);
 
@@ -134,6 +140,20 @@ class HelpApi {
   static Future<HelpResult> presence() =>
       _call('GET', '/presence', auth: true);
 
+  static Future<HelpResult> features({bool staff = true}) =>
+      _call('GET', '/features', auth: staff).timeout(const Duration(seconds: 15),
+          onTimeout: () => HelpResult(false, 0, {}));
+
+  static Future<HelpResult> managedFeatures() =>
+      _call('GET', '/features/manage', auth: true).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => HelpResult(false, 0, {}));
+
+  static Future<HelpResult> saveFeatures(Map<String, dynamic> roles) =>
+      _call('POST', '/features/manage', body: {'roles': roles}, auth: true)
+          .timeout(const Duration(seconds: 15),
+              onTimeout: () => HelpResult(false, 0, {}));
+
   static Future<HelpResult> claim(String id) =>
       _call('POST', '/claim', body: {'id': id}, auth: true);
 
@@ -156,6 +176,9 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
 
   bool _on = false;
   bool _busy = false;
+  bool _available = false;
+  bool _policyLoading = true;
+  bool _policyFailed = false;
   String _note = '';
   Timer? _timer;
   DateTime? _since;
@@ -181,6 +204,23 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
     _timer?.cancel();
     if (_on) HelpApi.cancel(_lastId, _lastPw);
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPolicy();
+  }
+
+  Future<bool> _loadPolicy() async {
+    final r = await HelpApi.features(staff: false);
+    if (!mounted) return false;
+    setState(() {
+      _policyLoading = false;
+      _policyFailed = !r.ok;
+      _available = r.ok && r.data['features']?['support_requests'] == true;
+    });
+    return _available;
   }
 
   Future<String?> _askName() async {
@@ -223,6 +263,11 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
       context: context, builder: (_) => const _StaffPickerDialog());
 
   Future<void> _turnOn() async {
+    setState(() => _busy = true);
+    final available = await _loadPolicy();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (!available) return;
     if (_id.length < 6 || _password.length < 4 || _password == '-') {
       showToast(translate('Enable one-time password first'));
       return;
@@ -277,7 +322,8 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
         labId: StaffAuth.isLab ? int.tryParse(StaffAuth.labId) : null,
         labName: StaffAuth.isLab ? StaffAuth.labName : null);
     if (!r.ok) {
-      showToast(translate('Cannot reach the server'));
+      showToast(translate(r.status == 403
+          ? 'Features disabled by administrator' : 'Cannot reach the server'));
       return false;
     }
     if (r.data['status'] == 'claimed') {
@@ -303,7 +349,13 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
         labId: StaffAuth.isLab ? int.tryParse(StaffAuth.labId) : null,
         labName: StaffAuth.isLab ? StaffAuth.labName : null);
     if (!mounted) return;
-    if (r.ok && r.data['status'] == 'claimed') {
+    if (r.status == 403) {
+      await _turnOff();
+      if (mounted) {
+        setState(() => _available = false);
+        showToast(translate('Features disabled by administrator'));
+      }
+    } else if (r.ok && r.data['status'] == 'claimed') {
       _finish(translate('Network admin is connecting'));
     }
   }
@@ -345,35 +397,35 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
             color: _on ? cs.colorScheme.secondary : cs.dividerColor,
             width: _on ? 1.4 : 1),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.support_agent,
-              color: _on ? cs.primaryColor : muted, size: 26),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(Icons.support_agent_rounded, color: cs.primaryColor, size: 26),
           const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(translate('Need network admin help'),
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
-                if (_note.isNotEmpty)
-                  Text(_note, style: TextStyle(fontSize: 12, color: muted)),
-              ],
-            ),
-          ),
-          if (_busy)
-            const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2))
-          else
-            Switch(
-              value: _on,
-              onChanged: (v) => v ? _turnOn() : _turnOff(),
-            ),
+          Expanded(child: Text(translate('Parsipol support'),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700))),
+        ]),
+        if (_note.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(_note, style: TextStyle(fontSize: 12, color: muted)),
         ],
-      ),
+        const SizedBox(height: 10),
+        if (_busy || _policyLoading)
+          const LinearProgressIndicator(minHeight: 2)
+        else if (_on)
+          OutlinedButton.icon(onPressed: _turnOff,
+              icon: const Icon(Icons.close_rounded, size: 18),
+              label: Text(translate('Cancel')))
+        else if (_available)
+          FilledButton.icon(onPressed: _turnOn,
+              icon: const Icon(Icons.support_agent_rounded, size: 18),
+              label: Text(translate('Request support')))
+        else ...[
+          Text(translate(_policyFailed ? 'Cannot reach the server'
+              : 'Features disabled by administrator'),
+              style: TextStyle(fontSize: 12, color: muted)),
+          TextButton(onPressed: _loadPolicy, child: Text(translate('Refresh'))),
+        ],
+      ]),
     );
   }
 }
@@ -381,7 +433,10 @@ class _HelpRequestCardState extends State<HelpRequestCard> {
 // ----------------------------------------------------------------- admin side
 
 class NetworkAdminPanel extends StatefulWidget {
-  const NetworkAdminPanel({super.key});
+  final bool dashboard;
+  final VoidCallback? onOpenConnections;
+  const NetworkAdminPanel(
+      {super.key, this.dashboard = false, this.onOpenConnections});
 
   @override
   State<NetworkAdminPanel> createState() => _NetworkAdminPanelState();
@@ -395,7 +450,10 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
   String _error = '';
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _inProgress = [];
-  int _section = 0; // 0 tickets, 1 history
+  int _section = 0;
+  Map<String, dynamic>? _features;
+  bool _loading = false;
+  bool _failed = false;
   final _historyKey = GlobalKey<HelpHistoryViewState>();
   Timer? _timer;
 
@@ -433,27 +491,53 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
     _timer = Timer.periodic(const Duration(seconds: 6), (_) => _load());
   }
 
+  bool _allows(String feature) =>
+      HelpApi.isSuperAdmin || _features?[feature] == true;
+
+  List<int> get _sections => [
+        if (_allows('support_queue')) 0,
+        if (_allows('history')) 1,
+        if (_allows('online')) 2,
+      ];
+
   Future<void> _load() async {
-    final r = await HelpApi.list();
+    if (_loading) return;
+    setState(() => _loading = true);
+    final policy = await HelpApi.features();
     if (!mounted) return;
-    if (r.status == 401) {
-      _timer?.cancel();
+    if (!policy.ok) {
+      if (policy.status == 401) _timer?.cancel();
       setState(() {
+        _loading = false;
+        _failed = true;
+        _features = null;
         _items = [];
         _inProgress = [];
       });
       return;
     }
-    if (r.ok) {
-      final all = (r.data['requests'] as List)
+    setState(() {
+      _features = Map<String, dynamic>.from(policy.data['features'] as Map);
+      _failed = false;
+      if (!_sections.contains(_section)) {
+        _section = _sections.isEmpty ? 0 : _sections.first;
+      }
+    });
+    final r = _allows('support_queue')
+        ? await HelpApi.list().timeout(const Duration(seconds: 15),
+            onTimeout: () => HelpResult(false, 0, {}))
+        : null;
+    if (!mounted) return;
+    if (r?.status == 401) _timer?.cancel();
+    setState(() {
+      _loading = false;
+      _failed = r != null && !r.ok;
+      final all = (r?.data['requests'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
-      // The server lists the oldest request first: that one is priority 1.
-      setState(() {
-        _items = all.where((e) => e['status'] == 'waiting').toList();
-        _inProgress = all.where((e) => e['status'] == 'claimed').toList();
-      });
-    }
+      _items = all.where((e) => e['status'] == 'waiting').toList();
+      _inProgress = all.where((e) => e['status'] == 'claimed').toList();
+    });
   }
 
   Future<void> _signIn() async {
@@ -669,73 +753,145 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
 
   Widget _list(BuildContext context) {
     final theme = Theme.of(context);
-    final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
+    final accent = PdTokens.accent(context);
+    final muted = PdTokens.muted(context);
+    final tabs = [
+      (0, 'Support requests', Icons.inbox_rounded),
+      (1, 'Support history', Icons.history_rounded),
+      (2, 'Who is online', Icons.people_alt_outlined),
+    ];
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Icon(Icons.support_agent, color: theme.primaryColor),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(translate('Network admin'),
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w700)),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: AlignmentDirectional.topStart,
+              end: AlignmentDirectional.bottomEnd,
+              colors: [accent, Color.lerp(accent, const Color(0xFF14232A), 0.45)!],
             ),
-            Text(HelpApi.adminName ?? '',
-                style: TextStyle(fontSize: 12, color: muted),
-                textDirection: TextDirection.ltr),
-            IconButton(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.15)),
+            boxShadow: [BoxShadow(color: accent.withOpacity(0.14),
+                blurRadius: 20, offset: const Offset(0, 8))],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.16))),
+                child: const Icon(Icons.support_agent_rounded,
+                    color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(translate(widget.dashboard ? 'Parsipol support' : 'Network admin'),
+                      style: const TextStyle(color: Colors.white,
+                          fontSize: 21, fontWeight: FontWeight.w700, height: 1.5)),
+                  const SizedBox(height: 4),
+                  Text(HelpApi.isSuperAdmin
+                      ? translate('Super administrator')
+                      : StaffAuth.fullName.isNotEmpty
+                          ? StaffAuth.fullName
+                          : HelpApi.adminName ?? '',
+                      textDirection: !HelpApi.isSuperAdmin && StaffAuth.fullName.isEmpty
+                          ? TextDirection.ltr : null,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12,
+                          color: Colors.white.withOpacity(0.82))),
+                ]),
+              ),
+              IconButton(
+                color: Colors.white,
+                disabledColor: Colors.white54,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                padding: const EdgeInsets.all(8),
                 tooltip: translate('Refresh'),
-                onPressed: () {
+                onPressed: _loading ? null : () {
                   _load();
                   _historyKey.currentState?.reload();
                 },
-                icon: const Icon(Icons.refresh, size: 20)),
-            TextButton(onPressed: _signOut, child: Text(translate('Logout'))),
-          ],
-        ),
-        const SizedBox(height: 10),
-        SegmentedButton<int>(
-          showSelectedIcon: false,
-          segments: [
-            ButtonSegment(
-              value: 0,
-              icon: const Icon(Icons.confirmation_number_outlined, size: 18),
-              label: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(translate('Tickets')),
-                if (_items.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  _CountBadge(_items.length),
-                ],
-              ]),
-            ),
-            ButtonSegment(
-              value: 1,
-              icon: const Icon(Icons.history_rounded, size: 18),
-              label: Text(translate('History')),
-            ),
-            if (HelpApi.isSuperAdmin)
-              ButtonSegment(
-                value: 2,
-                icon: const Icon(Icons.wifi_tethering_rounded, size: 18),
-                label: Text(translate('Who is online')),
-              ),
-          ],
-          selected: {_section},
-          onSelectionChanged: (s) => setState(() => _section = s.first),
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          // Both sections stay alive so switching keeps the search and scroll.
-          child: IndexedStack(
-            index: _section,
-            children: [
-              _tickets(context),
-              HelpHistoryView(key: _historyKey),
-              if (HelpApi.isSuperAdmin) const _PresenceView(),
+                icon: const Icon(Icons.refresh_rounded, size: 20)),
+              if (HelpApi.isSuperAdmin)
+                IconButton(color: Colors.white,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: const EdgeInsets.all(8),
+                    tooltip: translate('App features'),
+                    onPressed: () => showAppFeatures(context),
+                    icon: const Icon(Icons.tune_rounded, size: 20)),
+              if (!widget.dashboard)
+                IconButton(color: Colors.white, tooltip: translate('Logout'),
+                    onPressed: _signOut,
+                    icon: const Icon(Icons.logout_rounded, size: 20)),
+            ]),
+            if (widget.dashboard && widget.onOpenConnections != null) ...[
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.transparent,
+                    side: BorderSide(color: Colors.white.withOpacity(0.45)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                onPressed: widget.onOpenConnections,
+                icon: const Icon(Icons.desktop_windows_outlined, size: 18),
+                label: Text(translate('Connect by code'))),
             ],
-          ),
+          ]),
+        ),
+        const SizedBox(height: 18),
+        if (_features != null)
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final tab in tabs)
+              if (_sections.contains(tab.$1))
+                ChoiceChip(
+                  showCheckmark: false,
+                  selected: _section == tab.$1,
+                  selectedColor: accent,
+                  backgroundColor: theme.cardColor.withOpacity(0.94),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(color: _section == tab.$1
+                          ? accent : PdTokens.border(context))),
+                  labelStyle: TextStyle(fontWeight: FontWeight.w600,
+                      color: _section == tab.$1 ? Colors.white : theme.textTheme.bodyMedium?.color),
+                  avatar: Icon(tab.$3, size: 18,
+                      color: _section == tab.$1 ? Colors.white : accent),
+                  label: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Flexible(child: Text(translate(tab.$2), maxLines: 1,
+                        overflow: TextOverflow.ellipsis)),
+                    if (tab.$1 == 0 && _items.isNotEmpty) ...[
+                      const SizedBox(width: 6), _CountBadge(_items.length),
+                    ],
+                  ]),
+                  onSelected: (_) => setState(() => _section = tab.$1)),
+          ]),
+        const SizedBox(height: 16),
+        Expanded(
+          child: _features == null
+              ? Center(child: _loading
+                  ? const CircularProgressIndicator(strokeWidth: 2)
+                  : Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text(translate('Cannot reach the server'),
+                          style: TextStyle(color: muted)),
+                      const SizedBox(height: 12),
+                      OutlinedButton(onPressed: _load, child: Text(translate('Retry'))),
+                    ]))
+              : _sections.isEmpty
+                  ? Center(child: Text(translate('Features disabled by administrator'),
+                      textAlign: TextAlign.center, style: theme.textTheme.bodyMedium))
+                  : switch (_section) {
+                      1 => HelpHistoryView(key: _historyKey),
+                      2 => const _PresenceView(),
+                      _ => _tickets(context),
+                    },
         ),
       ],
     );
@@ -744,6 +900,15 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
   Widget _tickets(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
+    if (_items.isEmpty && _inProgress.isEmpty && _failed) {
+      return Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(translate('Cannot reach the server')),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: _load, child: Text(translate('Retry'))),
+        ]),
+      );
+    }
     if (_items.isEmpty && _inProgress.isEmpty) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -784,124 +949,101 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
   Widget _ticketCard(
       BuildContext context, Map<String, dynamic> it, int priority) {
     final theme = Theme.of(context);
-    final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
-    final f = TehranFormat(Directionality.of(context) == TextDirection.rtl);
+    final muted = PdTokens.muted(context);
+    const f = TehranFormat(false);
     final name = (it['name'] ?? '') as String;
     final wait = it['waiting_sec'] as int?;
-    final color = waitColor(wait);
+    final color = (wait ?? 0) < 300 ? PdTokens.accent(context) : waitColor(wait);
     final first = priority == 1;
     final created = parseServerTime(it['created_at']);
     final labName = (it['lab_name'] ?? '') as String;
     final labId = it['lab_id'] as int? ?? 0;
     return Material(
-      color: theme.cardColor,
-      borderRadius: BorderRadius.circular(14),
+      color: theme.cardColor.withOpacity(0.96),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         onTap: () => _connect(it),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-                color: first ? color : theme.dividerColor,
-                width: first ? 1.6 : 1),
+                color: first ? color.withOpacity(0.55) : PdTokens.border(context),
+                width: first ? 1.4 : 1),
           ),
-          child: Row(
-            children: [
-              // Priority number, coloured by how long the system has waited.
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 38,
+                height: 38,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(f.number(priority),
-                    style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15)),
+                    color: color.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(12)),
+                child: Text('$priority', textDirection: TextDirection.ltr,
+                    style: TextStyle(color: color,
+                        fontWeight: FontWeight.w700, fontSize: 16)),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Flexible(
-                        child: Text(name.isEmpty ? it['id'] as String : name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w600)),
-                      ),
-                      if (first) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(translate('Priority'),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700)),
-                        ),
-                      ],
-                    ]),
-                    const SizedBox(height: 2),
-                    Text('${it['ip']}  ·  ${it['id']}',
-                        textDirection: TextDirection.ltr,
-                        style: TextStyle(fontSize: 12, color: muted)),
-                    if (labName.isNotEmpty || labId > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                            '${translate('Lab')}: $labName'
-                            '${labId > 0 ? ' ($labId)' : ''}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, color: muted)),
-                      ),
-                    const SizedBox(height: 2),
-                    Text(
-                        '${translate('Waiting')}: ${formatDuration(context, wait)}'
-                        '${created == null ? '' : '  ·  ${f.time(created)}'}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: color,
-                            fontWeight: FontWeight.w600)),
-                    if ((it['note'] ?? '') != '')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(it['note'] as String,
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13)),
-                      ),
-                  ],
+              Expanded(child: Text(name.isEmpty ? it['id'] as String : name,
+                  textDirection: name.isEmpty ? TextDirection.ltr : null,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
+              if (first) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(color: color.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Text(translate('Priority'), style: TextStyle(
+                      color: color, fontSize: 11, fontWeight: FontWeight.w600)),
                 ),
-              ),
-              if (it['has_shot'] == true)
-                IconButton(
-                    tooltip: translate('Screenshot'),
-                    onPressed: () => _showShot(it),
-                    icon: const Icon(Icons.image_outlined, size: 20)),
-              IconButton(
-                  tooltip: translate('Rename'),
-                  onPressed: () => _rename(it),
-                  icon: const Icon(Icons.edit_outlined, size: 18)),
-              const SizedBox(width: 4),
-              ElevatedButton(
-                  onPressed: () => _connect(it),
-                  child: Text(translate('Accept'))),
+              ],
+            ]),
+            const SizedBox(height: 10),
+            Text('${it['ip']}  ·  ${it['id']}',
+                textDirection: TextDirection.ltr,
+                style: TextStyle(fontSize: 12, color: muted, letterSpacing: 0.3)),
+            if (labName.isNotEmpty || labId > 0) ...[
+              const SizedBox(height: 4),
+              Wrap(spacing: 6, children: [
+                Text('${translate('Lab')}: $labName',
+                    style: TextStyle(fontSize: 12, color: muted)),
+                if (labId > 0) Text('($labId)', textDirection: TextDirection.ltr,
+                    style: TextStyle(fontSize: 12, color: muted)),
+              ]),
             ],
-          ),
+            if ((it['note'] ?? '') != '') ...[
+              const SizedBox(height: 8),
+              Text(it['note'] as String, maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, height: 1.6)),
+            ],
+            const SizedBox(height: 10),
+            Wrap(alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12, runSpacing: 6, children: [
+              Text('${translate('Waiting')}: ${formatDuration(context, wait)}'
+                  '${created == null ? '' : '  ·  \u2066${f.time(created)}\u2069'}',
+                  style: TextStyle(fontSize: 12, color: color,
+                      fontWeight: FontWeight.w600)),
+              Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                if (it['has_shot'] == true)
+                  IconButton(tooltip: translate('Screenshot'),
+                      onPressed: () => _showShot(it),
+                      icon: Icon(Icons.image_outlined, size: 20, color: muted)),
+                IconButton(tooltip: translate('Rename'),
+                    onPressed: () => _rename(it),
+                    icon: Icon(Icons.edit_outlined, size: 18, color: muted)),
+                const SizedBox(width: 4),
+                ElevatedButton.icon(
+                    onPressed: () => _connect(it),
+                    icon: const Icon(Icons.desktop_windows_outlined, size: 16),
+                    label: Text(translate('Accept'))),
+              ]),
+            ]),
+          ]),
         ),
       ),
     );
@@ -949,12 +1091,10 @@ class _CountBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
         decoration: BoxDecoration(
-          color: Colors.redAccent,
+          color: const Color(0xFF14232A),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Text(
-            TehranFormat(Directionality.of(context) == TextDirection.rtl)
-                .number(count),
+        child: Text('$count', textDirection: TextDirection.ltr,
             style: const TextStyle(
                 color: Colors.white,
                 fontSize: 11,
@@ -1182,9 +1322,7 @@ class _StaffPickerDialogState extends State<_StaffPickerDialog> {
   }
 }
 
-// ---------------------------------------------------- who is online (super)
-
-// Super-admin only: which ParsiPol staff and labs are signed in and online now.
+// ------------------------------------------------------------ online directory
 class _PresenceView extends StatefulWidget {
   const _PresenceView();
 
@@ -1215,27 +1353,29 @@ class _PresenceViewState extends State<_PresenceView> {
   Future<void> _load() async {
     if (_loading) return;
     setState(() => _loading = true);
-    final r = await HelpApi.presence();
+    final r = await HelpApi.presence().timeout(const Duration(seconds: 15),
+        onTimeout: () => HelpResult(false, 0, {}));
     if (!mounted) return;
     setState(() {
       _loading = false;
       _failed = !r.ok;
-      if (!r.ok) return;
+      if (!r.ok) {
+        _staff = [];
+        _labs = [];
+        return;
+      }
       _staff = (r.data['staff'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((e) => e['online'] == true)
           .toList();
       _labs = (r.data['labs'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((e) => e['online'] == true)
           .toList();
-      // Online first, then by name, so available people are easy to spot.
-      int cmp(Map<String, dynamic> a, Map<String, dynamic> b, String key) {
-        final oa = a['online'] == true, ob = b['online'] == true;
-        if (oa != ob) return oa ? -1 : 1;
-        return ((a[key] ?? '') as String).compareTo((b[key] ?? '') as String);
-      }
-
-      _staff.sort((a, b) => cmp(a, b, 'full_name'));
-      _labs.sort((a, b) => cmp(a, b, 'name'));
+      _staff.sort((a, b) => ((a['full_name'] ?? '') as String)
+          .compareTo((b['full_name'] ?? '') as String));
+      _labs.sort((a, b) => ((a['name'] ?? '') as String)
+          .compareTo((b['name'] ?? '') as String));
     });
   }
 
@@ -1243,7 +1383,7 @@ class _PresenceViewState extends State<_PresenceView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
-    final f = TehranFormat(Directionality.of(context) == TextDirection.rtl);
+    const f = TehranFormat(false);
     final staffOnline = _staff.where((e) => e['online'] == true).length;
     final labsOnline = _labs.where((e) => e['online'] == true).length;
 
@@ -1297,12 +1437,12 @@ class _PresenceViewState extends State<_PresenceView> {
               ..._staff.map((e) => _presenceTile(
                   (e['full_name'] ?? '') as String,
                   (e['username'] ?? '') as String,
-                  e['online'] == true,
+                  Icons.support_agent_rounded,
                   muted)),
               const SizedBox(height: 12),
               _sectionHeader(translate('Labs'), labsOnline, f, muted),
               ..._labs.map((e) => _presenceTile((e['name'] ?? '') as String,
-                  '${e['id'] ?? ''}', e['online'] == true, muted)),
+                  '${e['id'] ?? ''}', Icons.science_outlined, muted)),
             ],
           ),
         ),
@@ -1321,6 +1461,7 @@ class _PresenceViewState extends State<_PresenceView> {
                   fontSize: 13, fontWeight: FontWeight.w700, color: muted)),
         ),
         Text('${f.number(online)} ${translate('Online')}',
+            textDirection: TextDirection.ltr,
             style: const TextStyle(
                 fontSize: 12,
                 color: Colors.green,
@@ -1330,25 +1471,170 @@ class _PresenceViewState extends State<_PresenceView> {
   }
 
   Widget _presenceTile(
-      String title, String subtitle, bool online, Color? muted) {
-    return ListTile(
-      dense: true,
-      leading: Icon(online ? Icons.lightbulb : Icons.lightbulb_outline,
-          color: online ? Colors.green : muted, size: 20),
-      title: Text(title.isEmpty ? subtitle : title,
-          maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: title.isEmpty
-          ? null
-          : Text(subtitle,
-              textDirection: TextDirection.ltr,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: muted)),
-      trailing: Text(translate(online ? 'Online' : 'Offline'),
-          style: TextStyle(
-              fontSize: 12,
-              color: online ? Colors.green : muted,
-              fontWeight: FontWeight.w600)),
+      String title, String subtitle, IconData icon, Color? muted) {
+    final accent = PdTokens.accent(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+          color: Theme.of(context).cardColor.withOpacity(0.94),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: PdTokens.border(context))),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: accent.withOpacity(0.09),
+              borderRadius: BorderRadius.circular(14)),
+          child: Icon(icon, color: accent, size: 22)),
+        title: Text(title.isEmpty ? subtitle : title,
+            textDirection: title.isEmpty ? TextDirection.ltr : null,
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: title.isEmpty
+            ? null
+            : Text(subtitle,
+                textDirection: TextDirection.ltr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: muted, letterSpacing: 0.3)),
+        trailing: Tooltip(message: translate('Online'),
+            child: const Icon(Icons.circle, size: 9, color: Color(0xFF23846C))),
+      ),
     );
+  }
+}
+
+Future<void> showAppFeatures(BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (context) => Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      child: SizedBox(
+        width: 640,
+        height: MediaQuery.sizeOf(context).height * 0.82,
+        child: Column(children: [
+          Align(alignment: AlignmentDirectional.centerEnd,
+              child: IconButton(tooltip: translate('Close'),
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close))),
+          const Expanded(child: AppFeatureSettings()),
+        ]),
+      ),
+    ));
+
+class AppFeatureSettings extends StatefulWidget {
+  const AppFeatureSettings({super.key});
+
+  @override
+  State<AppFeatureSettings> createState() => _AppFeatureSettingsState();
+}
+
+class _AppFeatureSettingsState extends State<AppFeatureSettings> {
+  Map<String, dynamic>? _roles;
+  bool _busy = false;
+  String _error = '';
+  static const _labels = {
+    'support_queue': 'Handle support requests',
+    'history': 'Support history',
+    'online': 'Who is online',
+    'support_requests': 'Request support',
+    'staff_approval': 'Staff approval bypass',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    HelpApi.adoptStaffToken();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() { _busy = true; _error = ''; });
+    final r = await HelpApi.managedFeatures();
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (r.ok) {
+        _roles = Map<String, dynamic>.from(r.data['roles'] as Map);
+      } else {
+        _error = translate(r.status == 403
+            ? 'Only the super administrator can manage features'
+            : 'Cannot reach the server');
+      }
+    });
+  }
+
+  Future<void> _save(String role, String feature, bool enabled) async {
+    final roles = {for (final e in _roles!.entries)
+      e.key: Map<String, dynamic>.from(e.value as Map)};
+    roles[role]![feature] = enabled;
+    setState(() { _busy = true; _error = ''; });
+    final r = await HelpApi.saveFeatures(roles);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (r.ok) {
+        _roles = roles;
+      } else {
+        _error = translate('Changes could not be saved');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = PdTokens.accent(context);
+    return ListView(padding: const EdgeInsets.all(20), children: [
+      Row(children: [
+        Icon(Icons.tune_rounded, color: accent),
+        const SizedBox(width: 10),
+        Expanded(child: Text(translate('App features'),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700))),
+        IconButton(tooltip: translate('Refresh'), onPressed: _busy ? null : _load,
+            icon: const Icon(Icons.refresh_rounded)),
+      ]),
+      const SizedBox(height: 10),
+      Text(translate('Changes apply on the next refresh. Active sessions and security remain protected.'),
+          style: TextStyle(color: PdTokens.muted(context), height: 1.6)),
+      if (_busy) const Padding(padding: EdgeInsets.symmetric(vertical: 12),
+          child: LinearProgressIndicator(minHeight: 2)),
+      if (_error.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Text(_error, style: TextStyle(color: theme.colorScheme.error)),
+        if (_roles == null)
+          Align(alignment: AlignmentDirectional.centerStart,
+              child: TextButton(onPressed: _busy ? null : _load,
+                  child: Text(translate('Retry')))),
+      ],
+      if (_roles != null)
+        for (final role in ['staff', 'labs']) ...[
+          const SizedBox(height: 20),
+          Row(children: [
+            Icon(role == 'staff' ? Icons.support_agent_rounded : Icons.science_outlined,
+                color: accent, size: 20),
+            const SizedBox(width: 8),
+            Text(translate(role == 'staff' ? 'Parsipol staff' : 'Labs'),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          ]),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(color: theme.cardColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.dividerColor)),
+            child: Column(children: [
+              for (final feature in (_roles![role] as Map).keys)
+                SwitchListTile.adaptive(
+                  title: Text(translate(_labels[feature] ?? feature)),
+                  subtitle: feature == 'staff_approval'
+                      ? Text(translate('Bypasses click-only approval for verified staff with a valid password.'))
+                      : feature == 'history'
+                          ? Text(translate('Hides browsing only; sessions are still recorded.'))
+                          : null,
+                  value: _roles![role][feature] == true,
+                  onChanged: _busy ? null : (v) => _save(role, feature as String, v)),
+            ]),
+          ),
+        ],
+    ]);
   }
 }

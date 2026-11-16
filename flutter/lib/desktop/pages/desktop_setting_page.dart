@@ -67,6 +67,9 @@ enum SettingsTabKey {
 
 class DesktopSettingPage extends StatefulWidget {
   final SettingsTabKey initialTabkey;
+  static bool get _isSuperStaff => StaffAuth.isStaff &&
+      (StaffAuth.helpAdminName.toLowerCase() == HelpApi.superAdmin ||
+          StaffAuth.username.toLowerCase() == HelpApi.superAdmin);
   // Getter so the lab gate re-evaluates after a logout/login switch.
   static List<SettingsTabKey> get tabKeys => [
     if (bind.mainGetBuildinOption(key: kOptionHideGeneralSetting) != 'Y')
@@ -85,7 +88,8 @@ class DesktopSettingPage extends StatefulWidget {
         !bind.isDisableSettings() &&
         bind.mainGetBuildinOption(key: kOptionHideRemotePrinterSetting) != 'Y')
       SettingsTabKey.printer,
-    if (!StaffAuth.isLab) SettingsTabKey.networkAdmin,
+    if (!StaffAuth.isLab && (!StaffAuth.isStaff || _isSuperStaff))
+      SettingsTabKey.networkAdmin,
     SettingsTabKey.about,
   ];
 
@@ -218,8 +222,10 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
               .add(_TabInfo(tab, 'Printer', Icons.print_outlined, Icons.print));
           break;
         case SettingsTabKey.networkAdmin:
-          settingTabs.add(_TabInfo(tab, 'Network admin',
-              Icons.support_agent_outlined, Icons.support_agent));
+          settingTabs.add(DesktopSettingPage._isSuperStaff
+              ? _TabInfo(tab, 'App features', Icons.tune, Icons.tune)
+              : _TabInfo(tab, 'Network admin',
+                  Icons.support_agent_outlined, Icons.support_agent));
           break;
         case SettingsTabKey.about:
           settingTabs
@@ -253,7 +259,9 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           children.add(const _Printer());
           break;
         case SettingsTabKey.networkAdmin:
-          children.add(const NetworkAdminPanel());
+          children.add(DesktopSettingPage._isSuperStaff
+              ? const AppFeatureSettings()
+              : const NetworkAdminPanel());
           break;
         case SettingsTabKey.about:
           children.add(const _About());
@@ -873,7 +881,16 @@ class _GeneralState extends State<_General> {
       return _Card(title: 'Audio Input Device', children: [child]);
     }
 
-    return AudioInput(builder: builder, isCm: false, isVoiceCall: false);
+    return Column(children: [
+      AudioInput(builder: builder, isCm: false, isVoiceCall: false),
+      _Card(title: 'Audio', children: [
+        _OptionCheckBox(context, 'Reduce audio echo during calls',
+            kOptionEnableAudioEchoSuppression),
+        Text(translate('audio_echo_suppression_tip'),
+                style: TextStyle(fontSize: 12, color: MyTheme.darkGray))
+            .marginOnly(left: _kContentHMargin, bottom: 8),
+      ]),
+    ]);
   }
 
   Widget record(BuildContext context) {

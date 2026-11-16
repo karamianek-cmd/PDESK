@@ -1886,6 +1886,14 @@ impl<T: InvokeUiSession> Interface for Session<T> {
             );
         }
         self.on_connected(self.lc.read().unwrap().conn_type);
+        #[cfg(feature = "flutter")]
+        if self.is_default() {
+            crate::staff_support::session_connected(
+                &self.get_id(),
+                self.lc.read().unwrap().session_id,
+                &pi,
+            );
+        }
         #[cfg(windows)]
         {
             let mut path = std::env::temp_dir();

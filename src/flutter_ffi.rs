@@ -2846,6 +2846,14 @@ pub fn main_get_common(key: String) -> String {
                 "error:unsupported".to_owned()
             }
         } else {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            {
+                if key == "parsidesk-update-info" {
+                    return crate::parsidesk_update::available_update_json();
+                } else if key == "parsidesk-verified-download-url" {
+                    return crate::parsidesk_update::verified_download_url();
+                }
+            }
             "".to_owned()
         }
     }
@@ -2864,7 +2872,10 @@ pub fn main_get_common_sync(key: String) -> SyncReturn<String> {
     }
     // Metadata verification performs blocking network requests. Keep this key on
     // the asynchronous FFI path to avoid blocking the calling Flutter isolate.
-    if key.starts_with("verified-download-url-") {
+    if key.starts_with("verified-download-url-")
+        || key == "parsidesk-update-info"
+        || key == "parsidesk-verified-download-url"
+    {
         return SyncReturn("error:unsupported".to_owned());
     }
     SyncReturn(main_get_common(key))
@@ -3015,6 +3026,39 @@ pub fn main_set_common(_key: String, _value: String) {
                     log::error!("{}", error);
                     push_update_me_error(error);
                 }
+            }
+        }
+    }
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        if _key == "parsidesk-download-new-version" {
+            let data = match crate::parsidesk_update::start_download(&_value) {
+                Ok(id) => HashMap::from([
+                    ("name", "parsidesk-download-new-version".to_owned()),
+                    ("id", id),
+                ]),
+                Err(e) => HashMap::from([
+                    ("name", "parsidesk-download-new-version".to_owned()),
+                    ("error", e.to_string()),
+                ]),
+            };
+            let _res = flutter::push_global_event(
+                flutter::APP_TYPE_MAIN,
+                serde_json::ser::to_string(&data).unwrap_or_default(),
+            );
+        } else if _key == "parsidesk-update-me" {
+            if let Err(e) = crate::parsidesk_update::install_downloaded(&_value) {
+                let error = format!("Failed to update to new version, {}", e);
+                log::error!("{}", error);
+                let data = HashMap::from([
+                    ("name", "parsidesk-update-me".to_owned()),
+                    ("error", error),
+                ]);
+                let _res = flutter::push_global_event(
+                    flutter::APP_TYPE_MAIN,
+                    serde_json::ser::to_string(&data).unwrap_or_default(),
+                );
             }
         }
     }

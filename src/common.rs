@@ -1084,9 +1084,8 @@ pub fn apply_parsidesk_defaults() {
     }
 }
 
-// The version users see (About screen, update notices). It is independent of the internal
-// protocol version (crate::VERSION), which other devices use to decide which features to enable.
-pub const PARSIDESK_VERSION: &str = "1.1.0";
+// User-facing version, independent of the protocol VERSION; tracks the package so update prompts only fire for newer releases.
+pub const PARSIDESK_VERSION: &str = env!("CARGO_PKG_VERSION");
 const PARSIDESK_VERSION_URL: &str = "https://desk.parsipol.com/version.json";
 
 pub fn check_software_update() {

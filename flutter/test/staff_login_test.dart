@@ -1,23 +1,70 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hbb/common/staff_auth.dart';
 import 'package:flutter_hbb/common/widgets/staff_login.dart';
+import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/generated_bridge.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 class _Binding extends Fake implements RustdeskImpl {
+  final localOptions = <String, String>{};
+  final options = <String, String>{};
+
   @override
   String translate(
           {required String name, required String locale, dynamic hint}) =>
       name;
 
   @override
-  String mainGetLocalOption({required String key, dynamic hint}) => '';
+  String mainGetLocalOption({required String key, dynamic hint}) =>
+      localOptions[key] ?? '';
+
+  @override
+  String mainGetOptionSync({required String key, dynamic hint}) =>
+      options[key] ?? '';
+
+  @override
+  Future<void> mainSetLocalOption(
+      {required String key, required String value, dynamic hint}) async {
+    localOptions[key] = value;
+  }
+
+  @override
+  Future<void> mainSetOption(
+      {required String key, required String value, dynamic hint}) async {
+    options[key] = value;
+  }
+
+  @override
+  Future<String> mainGetMyId({dynamic hint}) async => '123456789';
 }
 
 const _grey = Color(0xFFEFECE4);
 
 void main() {
+  testWidgets('lab identity reaches the host service and clears on logout',
+      (tester) async {
+    final binding = _Binding();
+    binding.localOptions.addAll({
+      'staff-username': '1234',
+      'staff-mode': 'lab',
+      'staff-lab-id': '1234',
+    });
+    platformFFI.setBindingForTesting(binding);
+    await http.runWithClient(() async {
+      StaffAuth.load();
+      await tester.pump();
+      expect(binding.options[kOptionStaffLabId], '1234');
+      await StaffAuth.logout();
+      expect(binding.options[kOptionStaffLabId], '');
+      expect(binding.localOptions['staff-lab-id'], '');
+    }, () => MockClient((request) async => http.Response('{"ok":true}', 200)));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('staff entrance stays accent-coloured on hover, text in Shabnam',
       (tester) async {
     platformFFI.setBindingForTesting(_Binding());

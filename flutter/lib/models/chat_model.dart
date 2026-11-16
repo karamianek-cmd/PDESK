@@ -160,7 +160,8 @@ class ChatModel with ChangeNotifier {
     // mobile check navigationBar
     final bar = navigationBarKey.currentWidget;
     if (bar != null) {
-      if ((bar as BottomNavigationBar).currentIndex == 1) {
+      if ((bar as BottomNavigationBar).currentIndex ==
+          HomePage.homeKey.currentState?.chatPageTabIndex) {
         return;
       }
     }

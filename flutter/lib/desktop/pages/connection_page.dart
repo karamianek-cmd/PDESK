@@ -616,7 +616,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                             fontWeight: isWindows ? FontWeight.w500 : null,
                             letterSpacing: isWindows ? 1.5 : null,
                           ),
-                          textDirection: isWindows ? TextDirection.ltr : null,
+                          textDirection: TextDirection.ltr,
                           maxLines: 1,
                           cursorColor:
                               Theme.of(context).textTheme.titleLarge?.color,

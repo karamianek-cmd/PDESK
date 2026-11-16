@@ -27,6 +27,7 @@ import '../widgets/parsidesk_brand.dart';
 import 'package:flutter_hbb/common/staff_auth.dart';
 import 'package:flutter_hbb/common/widgets/lab_pane.dart';
 import 'package:flutter_hbb/common/widgets/network_help.dart';
+import 'package:flutter_hbb/common/widgets/parsidesk_update.dart';
 import '../widgets/pardis_art.dart';
 
 class DesktopHomePage extends StatefulWidget {
@@ -54,6 +55,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Timer? _updateTimer;
   bool isCardClosed = false;
   bool _installRevealed = false;
+  bool _showConnections = false;
 
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
@@ -66,8 +68,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final home = Obx(() {
       final isLab = StaffAuth.isLab;
       final isIncomingOnly = bind.isIncomingOnly();
-      // Lab devices keep the right pane for the lab name even in incoming-only builds.
-      final showRight = !isIncomingOnly || isLab;
+      // Keep the lab name and staff support dashboard in incoming-only builds.
+      final showRight = !isIncomingOnly || isLab || StaffAuth.isStaff;
       if (isLab) {
         // RTL: the lab-name pane leads (visual right), the ID/password card follows.
         return Row(
@@ -136,7 +138,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       if (!isOutgoingOnly && isWindows) _buildWinDeviceCard(context),
       if (!isOutgoingOnly && !isWindows) buildIDBoard(context),
       if (!isOutgoingOnly && !isWindows) buildPasswordBoard(context),
-      if (!isOutgoingOnly) const HelpRequestCard(),
+      if (!isOutgoingOnly && !StaffAuth.isStaff) const HelpRequestCard(),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -255,10 +257,31 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ]),
       );
     }
+    if (StaffAuth.isStaff) {
+      return Container(
+        color: surface,
+        child: _showConnections
+            ? Column(children: [
+                TextButton(
+                  onPressed: () => setState(() => _showConnections = false),
+                  child: Text(translate('Back to support')),
+                ),
+                Expanded(child: ConnectionPage()),
+              ])
+            : Column(children: [
+                Expanded(child: NetworkAdminPanel(
+                  dashboard: true,
+                  onOpenConnections: bind.isIncomingOnly()
+                      ? null
+                      : () => setState(() => _showConnections = true),
+                )),
+                if (!bind.isIncomingOnly()) const OnlineStatusWidget(),
+              ]),
+      );
+    }
     return Container(
       color: surface,
       child: Column(children: [
-        if (StaffAuth.isStaff) const AdminEntranceButton(),
         Expanded(child: ConnectionPage()),
       ]),
     );
@@ -605,13 +628,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   Widget buildHelpCards(String updateUrl) {
     if (updateUrl.isNotEmpty && !isCardClosed) {
-      // A newer ParsiDesk exists (reported by desk.parsipol.com): send the member to the download page.
-      return buildInstallCard(
-          "Status",
-          "${translate("new-version-of-{${bind.mainGetAppNameSync()}}-tip")} (${bind.mainGetNewVersion()}).",
-          'Download', () async {
-        await launchUrl(Uri.parse('https://desk.parsipol.com/members/'));
-      }, closeButton: true);
+      // A newer ParsiDesk exists (reported by desk.parsipol.com): offer an
+      // in-app update that stays available until the member installs it.
+      return ParsideskUpdateCard(updateUrl: updateUrl);
     }
     if (systemError.isNotEmpty) {
       return buildInstallCard("", systemError, "", () {});

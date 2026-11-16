@@ -293,6 +293,9 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
     Provider.of<FfiModel>(context);
     final outgoingOnly = bind.isOutgoingOnly();
     final incomingOnly = bind.isIncomingOnly();
+    final isSuperStaff = StaffAuth.isStaff &&
+        (StaffAuth.helpAdminName.toLowerCase() == HelpApi.superAdmin ||
+            StaffAuth.username.toLowerCase() == HelpApi.superAdmin);
     final customClientSection = CustomSettingsSection(
         child: Column(
       children: [
@@ -776,16 +779,20 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                   await HelpApi.logout();
                   await StaffAuth.logout();
                 }),
-          if (!StaffAuth.isLab)
+          if (!StaffAuth.isLab && (!StaffAuth.isStaff || isSuperStaff))
             SettingsTile(
-                title: Text(translate('Network admin')),
-                leading: Icon(Icons.support_agent),
+                title: Text(translate(
+                    isSuperStaff ? 'App features' : 'Network admin')),
+                leading: Icon(
+                    isSuperStaff ? Icons.tune : Icons.support_agent),
                 onPressed: (context) {
                   Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => Scaffold(
-                          appBar:
-                              AppBar(title: Text(translate('Network admin'))),
-                          body: const NetworkAdminPanel())));
+                          appBar: AppBar(title: Text(translate(
+                              isSuperStaff ? 'App features' : 'Network admin'))),
+                          body: isSuperStaff
+                              ? const AppFeatureSettings()
+                              : const NetworkAdminPanel())));
                 }),
           if (!disabledSettings && !_hideNetwork && !_hideServer)
             SettingsTile(

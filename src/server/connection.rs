@@ -2033,6 +2033,12 @@ impl Connection {
             pi.platform_additions = serde_json::to_string(&platform_additions).unwrap_or("".into());
         }
 
+        #[cfg(feature = "flutter")]
+        crate::staff_support::set_password_kind(
+            &mut pi,
+            self.conn_audit_primary_auth == ConnAuditPrimaryAuth::PermanentPassword,
+        );
+
         if self.is_port_forward() {
             pi.features = Some(Features {
                 port_forward_mux: self.port_forward_mux.is_some(),
@@ -3071,7 +3077,16 @@ impl Connection {
                 crate::get_builtin_option(keys::OPTION_ALLOW_LOGON_SCREEN_PASSWORD) == "Y"
                     && is_logon();
 
-            if (password::approve_mode() == ApproveMode::Click && !allow_logon_screen_password)
+            #[cfg(feature = "flutter")]
+            let staff_approved = password::approve_mode() == ApproveMode::Click
+                && self.is_remote()
+                && crate::staff_support::verify_login_ticket(&lr, &self.hash.challenge).await;
+            #[cfg(not(feature = "flutter"))]
+            let staff_approved = false;
+
+            if (password::approve_mode() == ApproveMode::Click
+                && !allow_logon_screen_password
+                && !staff_approved)
                 || password::approve_mode() == ApproveMode::Both && !password::has_valid_password()
             {
                 #[cfg(not(any(target_os = "android", target_os = "ios")))]

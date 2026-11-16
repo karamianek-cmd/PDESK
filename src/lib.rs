@@ -1,5 +1,8 @@
 #[cfg(any(test, not(target_os = "linux")))]
 mod audio_resampler;
+mod audio_echo_suppression;
+#[cfg(any(feature = "flutter", test))]
+mod staff_support;
 mod keyboard;
 /// cbindgen:ignore
 pub mod platform;
@@ -62,6 +65,10 @@ mod whiteboard;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod updater;
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[allow(dead_code)]
+mod parsidesk_update;
 
 mod ui_cm_interface;
 mod ui_interface;

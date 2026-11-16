@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../../common.dart';
+import '../../common/staff_auth.dart';
 import '../../common/widgets/dialog.dart';
 import '../../consts.dart';
 import '../../models/platform_model.dart';
@@ -19,10 +20,11 @@ import 'home_page.dart';
 
 class ServerPage extends StatefulWidget implements PageShape {
   @override
-  final title = translate("Share screen");
+  final title = translate(StaffAuth.isLab ? 'Support' : 'Share screen');
 
   @override
-  final icon = const Icon(Icons.mobile_screen_share);
+  final icon = Icon(
+      StaffAuth.isLab ? Icons.support_agent : Icons.mobile_screen_share);
 
   @override
   final appBarActions = (!bind.isDisableSettings() &&
@@ -750,9 +752,12 @@ class ConnectionManager extends StatelessWidget {
                                     gFFI.chatModel.changeCurrentKey(
                                         MessageKey(client.peerId, client.id));
                                     final bar = navigationBarKey.currentWidget;
-                                    if (bar != null) {
+                                    final chatIndex = HomePage.homeKey
+                                        .currentState?.chatPageTabIndex;
+                                    if (bar != null &&
+                                        chatIndex != null && chatIndex >= 0) {
                                       bar as BottomNavigationBar;
-                                      bar.onTap!(1);
+                                      bar.onTap!(chatIndex);
                                     }
                                   },
                                   icon: unreadTopRightBuilder(

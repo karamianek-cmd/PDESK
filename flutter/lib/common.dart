@@ -31,6 +31,7 @@ import 'package:window_size/window_size.dart' as window_size;
 import '../consts.dart';
 import 'common/staff_auth.dart';
 import 'common/widgets/overlay.dart';
+import 'common/widgets/parsidesk_update.dart';
 import 'mobile/pages/file_manager_page.dart';
 import 'mobile/pages/remote_page.dart';
 import 'mobile/pages/view_camera_page.dart';
@@ -370,8 +371,7 @@ class MyTheme {
     }),
   );
 
-  // Windows uses IRANSans; other platforms keep Vazirmatn.
-  static final String appFontFamily = isWindows ? 'IRANSans' : 'Vazirmatn';
+  static const String appFontFamily = 'Shabnam';
   static final List<String>? appFontFallback =
       isWindows ? const ['Vazirmatn'] : null;
 
@@ -4231,6 +4231,7 @@ void checkUpdate() {
           (Map<String, dynamic> evt) async {
         if (evt['url'] is String) {
           stateGlobal.updateUrl.value = evt['url'];
+          triggerParsideskUpdateNotification(evt['url']);
         }
       });
       Timer(const Duration(seconds: 1), () async {

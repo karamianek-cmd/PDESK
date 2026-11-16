@@ -57,6 +57,7 @@ class StaffAuth {
 
   // Lab support needs a running service with one-time passwords enabled.
   static Future<void> _ensureLabOtp() async {
+    await bind.mainSetOption(key: kOptionStaffLabId, value: labId);
     if (bind.mainGetOptionSync(key: kOptionVerificationMethod) ==
         'use-permanent-password') {
       await bind.mainSetOption(
@@ -94,6 +95,7 @@ class StaffAuth {
       return;
     }
     try {
+      if (isLab) body['id'] = await bind.mainGetMyId();
       await http
           .post(Uri.parse('$_kBase/presence/beat'),
               headers: headers, body: jsonEncode(body))
@@ -188,6 +190,8 @@ class StaffAuth {
     await bind.mainSetLocalOption(key: _kLabNameOption, value: labName);
     await bind.mainSetLocalOption(key: _kHelpTokenOption, value: helpToken);
     await bind.mainSetLocalOption(key: _kHelpAdminOption, value: helpAdminName);
+    await bind.mainSetOption(
+        key: kOptionStaffLabId, value: mode == 'lab' ? labId : '');
   }
 
   static Future<void> logout() async {

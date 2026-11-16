@@ -659,6 +659,9 @@ impl AudioEncoder {
 }
 
 fn send_f32(data: &[f32], encoder: &mut AudioEncoder, sp: &GenericService) {
+    if crate::audio_echo_suppression::suppress_capture() {
+        return;
+    }
     if !encoder.should_encode(data) {
         return;
     }

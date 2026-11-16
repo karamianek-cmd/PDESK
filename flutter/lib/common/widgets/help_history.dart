@@ -17,7 +17,8 @@ class _Tracked {
   final String peerId;
   final DateTime started = DateTime.now();
   bool seenOpen = false;
-  _Tracked(this.hid, this.peerId);
+  final bool direct;
+  _Tracked(this.hid, this.peerId, {this.direct = false});
 }
 
 /// Reports to the help server while a remote window opened from a ticket stays
@@ -32,10 +33,32 @@ class HelpSessionTracker {
   /// Set by the admin panel to offer a note when a session ends.
   static void Function(Map<String, dynamic> item)? onEnded;
 
-  static void start(int hid, String peerId) {
-    if (!isDesktop) return;
-    _active.add(_Tracked(hid, peerId));
+  static bool isTrackingPeer(String peerId) =>
+      _active.any((session) => session.peerId == peerId);
+
+  static void start(int hid, String peerId, {bool direct = false}) {
+    if (!isDesktop && !direct) return;
+    if (_active.any((session) => session.hid == hid)) return;
+    _active.add(_Tracked(hid, peerId, direct: direct));
     _timer ??= Timer.periodic(_period, (_) => _tick());
+  }
+
+  static Future<void> finish(int hid) async {
+    _active.removeWhere((session) => session.hid == hid);
+    final r = await HelpApi.historyEnd(hid);
+    final item = r.data['item'];
+    if (r.ok && item is Map) {
+      final entry = Map<String, dynamic>.from(item);
+      final handler = onEnded;
+      if (handler != null) {
+        handler(entry);
+      } else {
+        final context = globalKey.currentContext;
+        if (context != null) {
+          showHistoryEntryDialog(context, entry, justEnded: true);
+        }
+      }
+    }
   }
 
   static Future<Set<String>> _openPeers() async {
@@ -57,10 +80,16 @@ class HelpSessionTracker {
       _timer = null;
       return;
     }
-    final open = await _openPeers();
+    final open = _active.any((session) => !session.direct)
+        ? await _openPeers()
+        : <String>{};
     final alive = <int>[];
     final ended = <_Tracked>[];
     for (final s in _active) {
+      if (s.direct) {
+        alive.add(s.hid);
+        continue;
+      }
       if (open.contains(s.peerId)) {
         s.seenOpen = true;
         alive.add(s.hid);
@@ -86,9 +115,12 @@ class HelpSessionTracker {
 bool _isPersian(BuildContext context) =>
     Directionality.of(context) == TextDirection.rtl;
 
+String _latinNumbers(String text) => text.replaceAllMapped(RegExp(r'[۰-۹]'),
+    (m) => (m.group(0)!.codeUnitAt(0) - 0x06f0).toString());
+
 String formatDuration(BuildContext context, int? sec) {
   if (sec == null) return '—';
-  final f = TehranFormat(_isPersian(context));
+  const f = TehranFormat(false);
   final m = (sec + 30) ~/ 60;
   if (m < 1) return translate('Less than a minute');
   if (m < 60) return f.number('$m ${translate('min')}');
@@ -185,7 +217,7 @@ class HelpHistoryViewState extends State<HelpHistoryView> {
         day = d;
         rows.add(Padding(
           padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
-          child: Text(f.dayTitle(at),
+          child: Text(_latinNumbers(f.dayTitle(at)),
               style: TextStyle(
                   fontSize: 13, fontWeight: FontWeight.w700, color: muted)),
         ));
@@ -251,10 +283,10 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final f = TehranFormat(_isPersian(context));
+    const f = TehranFormat(false);
     Widget tile(IconData icon, String label, String value, Color color) =>
-        Expanded(
-          child: Container(
+          Container(
+            constraints: const BoxConstraints(minHeight: 88),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: color.withOpacity(0.08),
@@ -269,12 +301,13 @@ class _StatsRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(value,
+                        textDirection: TextDirection.ltr,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w700)),
                     Text(translate(label),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             fontSize: 11,
@@ -287,30 +320,33 @@ class _StatsRow extends StatelessWidget {
                 ),
               ),
             ]),
-          ),
-        );
+          );
     final open = (stats['open'] as int?) ?? 0;
-    return Row(children: [
+    final cards = [
       tile(Icons.today_rounded, 'Today', f.number(stats['today'] ?? 0),
-          MyTheme.accent),
-      const SizedBox(width: 8),
+          Theme.of(context).primaryColor),
       tile(Icons.date_range_rounded, 'Last 30 days',
           f.number(stats['month'] ?? 0), Colors.teal),
-      const SizedBox(width: 8),
       tile(
           Icons.hourglass_bottom_rounded,
           'Average wait',
           formatDuration(context, stats['avg_wait_sec'] as int?),
-          Colors.orange),
-      const SizedBox(width: 8),
+          const Color(0xFF9D722F)),
       tile(
           open > 0 ? Icons.play_circle_outline : Icons.timer_outlined,
           open > 0 ? 'Sessions in progress' : 'Average session',
           open > 0
               ? f.number(open)
               : formatDuration(context, stats['avg_duration_sec'] as int?),
-          open > 0 ? Colors.green : Colors.indigo),
-    ]);
+          open > 0 ? Colors.green : Theme.of(context).primaryColor),
+    ];
+    return LayoutBuilder(builder: (context, constraints) {
+      final columns = constraints.maxWidth < 600 ? 2 : 4;
+      final width = (constraints.maxWidth - 8 * (columns - 1)) / columns;
+      return Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final card in cards) SizedBox(width: width, child: card),
+      ]);
+    });
   }
 }
 
@@ -323,7 +359,7 @@ class _HistoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
-    final f = TehranFormat(_isPersian(context));
+    const f = TehranFormat(false);
     final at = parseServerTime(item['accepted_at']);
     final name = (item['name'] ?? '') as String;
     final open = item['open'] == true;
@@ -348,6 +384,7 @@ class _HistoryTile extends StatelessWidget {
               SizedBox(
                 width: 48,
                 child: Text(at == null ? '' : f.time(at),
+                    textDirection: TextDirection.ltr,
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w600)),
               ),
@@ -477,7 +514,7 @@ class _HistoryEntryDialogState extends State<_HistoryEntryDialog> {
     final it = widget.item;
     final theme = Theme.of(context);
     final muted = theme.textTheme.bodySmall?.color?.withOpacity(0.65);
-    final f = TehranFormat(_isPersian(context));
+    const f = TehranFormat(false);
     String when(String key) {
       final t = parseServerTime(it[key]);
       return t == null ? '—' : f.dateTime(t);
@@ -523,13 +560,13 @@ class _HistoryEntryDialogState extends State<_HistoryEntryDialog> {
                 row('Lab name', '${it['lab_name']}'),
               if ((it['lab_id'] as int? ?? 0) > 0)
                 row('Lab ID', '${it['lab_id']}', ltr: true),
-              row('Requested at', when('requested_at')),
-              row('Accepted at', when('accepted_at')),
+              row('Requested at', when('requested_at'), ltr: true),
+              row('Accepted at', when('accepted_at'), ltr: true),
               row(
                   'Ended at',
                   it['open'] == true
                       ? translate('In progress')
-                      : when('ended_at')),
+                      : when('ended_at'), ltr: it['open'] != true),
               row('Wait time', formatDuration(context, it['wait_sec'] as int?)),
               row('Session length',
                   formatDuration(context, it['duration_sec'] as int?)),

@@ -472,6 +472,14 @@ impl<T: InvokeUiSession> Remote<T> {
             .unwrap()
             .set_disconnected(round);
 
+        #[cfg(feature = "flutter")]
+        if self.is_connected && self.handler.is_default() && _set_disconnected_ok {
+            crate::staff_support::session_disconnected(
+                &self.handler.get_id(),
+                self.handler.lc.read().unwrap().session_id,
+            );
+        }
+
         #[cfg(not(target_os = "ios"))]
         if self.handler.is_default() && _set_disconnected_ok {
             // Other sessions may keep the listener running after this one disconnects.

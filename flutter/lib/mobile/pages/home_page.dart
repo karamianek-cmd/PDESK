@@ -4,7 +4,10 @@ import 'package:flutter_hbb/mobile/pages/settings_page.dart';
 import 'package:flutter_hbb/web/settings_page.dart';
 import 'package:get/get.dart';
 import '../../common.dart';
+import '../../common/staff_auth.dart';
 import '../../common/widgets/chat_page.dart';
+import '../../common/widgets/network_help.dart';
+import '../../desktop/widgets/pardis_art.dart';
 import '../../models/platform_model.dart';
 import '../../models/state_model.dart';
 import 'connection_page.dart';
@@ -29,6 +32,7 @@ class HomePageState extends State<HomePage> {
   int get selectedIndex => _selectedIndex;
   final List<PageShape> _pages = [];
   int _chatPageTabIndex = -1;
+  int get chatPageTabIndex => _chatPageTabIndex;
   bool get isChatPageCurrentTab => isAndroid
       ? _selectedIndex == _chatPageTabIndex
       : false; // change this when ios have chat page
@@ -47,16 +51,30 @@ class HomePageState extends State<HomePage> {
 
   void initPages() {
     _pages.clear();
-    if (!bind.isIncomingOnly()) {
+    _chatPageTabIndex = -1;
+    final labSupport = StaffAuth.isLab && isAndroid && !bind.isOutgoingOnly();
+    if (StaffAuth.isStaff) {
+      _pages.add(_SupportPage(
+        onOpenConnections: bind.isIncomingOnly()
+            ? null
+            : () => setState(() => _selectedIndex = 1),
+      ));
+    }
+    if (labSupport) {
+      _pages.add(ServerPage());
+    }
+    if (!labSupport && !bind.isIncomingOnly()) {
       _pages.add(ConnectionPage(
         appBarActions: [],
       ));
     }
     if (isAndroid && !bind.isOutgoingOnly()) {
       _chatPageTabIndex = _pages.length;
-      _pages.addAll([ChatPage(type: ChatPageType.mobileMain), ServerPage()]);
+      _pages.add(ChatPage(type: ChatPageType.mobileMain));
+      if (!labSupport) _pages.add(ServerPage());
     }
     _pages.add(SettingsPage());
+    _selectedIndex = _selectedIndex.clamp(0, _pages.length - 1).toInt();
   }
 
   @override
@@ -152,6 +170,31 @@ class HomePageState extends State<HomePage> {
     }
     return Text(bind.mainGetAppNameSync());
   }
+}
+
+class _SupportPage extends StatelessWidget implements PageShape {
+  final VoidCallback? onOpenConnections;
+  _SupportPage({this.onOpenConnections});
+
+  @override
+  final title = translate('Support');
+
+  @override
+  final icon = const Icon(Icons.support_agent);
+
+  @override
+  final List<Widget> appBarActions = [];
+
+  @override
+  Widget build(BuildContext context) => Stack(children: [
+        if (MyTheme.isPardis)
+          const Positioned(left: 0, right: 0, bottom: 0, height: 190,
+              child: ParsiDeskBottomArt()),
+        Positioned.fill(child: NetworkAdminPanel(
+          dashboard: true,
+          onOpenConnections: onOpenConnections,
+        )),
+      ]);
 }
 
 class WebHomePage extends StatelessWidget {

@@ -114,6 +114,7 @@ const String kOptionEnableRemotePrinter = "enable-remote-printer";
 const String kOptionEnableClipboard = "enable-clipboard";
 const String kOptionEnableFileTransfer = "enable-file-transfer";
 const String kOptionEnableAudio = "enable-audio";
+const String kOptionEnableAudioEchoSuppression = "enable-audio-echo-suppression";
 const String kOptionEnableCamera = "enable-camera";
 const String kOptionEnableTerminal = "enable-terminal";
 const String kOptionTerminalPersistent = "terminal-persistent";
@@ -132,6 +133,7 @@ const String kOptionHideElevateButtonInAcceptWindow =
     "hide-elevate-button-in-accept-window";
 const String kOptionAllowRemoteConfigModification =
     "allow-remote-config-modification";
+const String kOptionStaffLabId = "staff-lab-id";
 const String kOptionVerificationMethod = "verification-method";
 const String kOptionApproveMode = "approve-mode";
 const String kOptionAllowNumericOneTimePassword =

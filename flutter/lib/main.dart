@@ -26,6 +26,7 @@ import 'package:window_manager/window_manager.dart';
 import 'common.dart';
 import 'common/staff_auth.dart';
 import 'common/widgets/staff_login.dart';
+import 'common/widgets/staff_direct_history.dart';
 import 'consts.dart';
 import 'mobile/pages/home_page.dart';
 import 'mobile/pages/server_page.dart';
@@ -127,6 +128,7 @@ Future<void> initEnv(String appType) async {
   // focus on multi-ffi on desktop first
   await initGlobalFFI();
   StaffAuth.load();
+  if (appType == kAppTypeMain) StaffDirectHistory.init();
   // await Firebase.initializeApp();
   _registerEventHandler();
   // Update the system theme.
