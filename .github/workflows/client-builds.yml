@@ -1,6 +1,5 @@
 ﻿name: Client builds (artifacts only)
 
-# Runs when .build-trigger is changed on this branch (edit/touch that file to rebuild).
 on:
   workflow_dispatch:
     inputs:
@@ -8,12 +7,6 @@ on:
         description: Build Windows only
         type: boolean
         default: false
-  push:
-    branches:
-      - client-builds
-      - staff
-    paths:
-      - .build-trigger
 
 permissions:
   contents: write
