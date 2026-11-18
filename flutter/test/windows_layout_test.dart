@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_home_page.dart';
 import 'package:flutter_hbb/desktop/pages/install_page.dart';
 import 'package:flutter_hbb/generated_bridge.dart';
@@ -11,6 +12,8 @@ import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/window_geometry.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 
 class _Binding extends Fake implements RustdeskImpl {
   String savedFrame = '';
@@ -27,7 +30,19 @@ class _Binding extends Fake implements RustdeskImpl {
   @override
   String mainGetBuildinOption({required String key, dynamic hint}) => '';
   @override
+  bool mainIsOptionFixed({required String key, dynamic hint}) => false;
+  @override
+  Future<String> mainGetLastRemoteId({dynamic hint}) async => '';
+  @override
+  Future<String> mainGetConnectStatus({dynamic hint}) async =>
+      '{"status_num":1,"video_conn_count":0}';
+  @override
+  Future<bool> mainIsUsingPublicServer({dynamic hint}) async => false;
+  @override
   String getLocalFlutterOption({required String k, dynamic hint}) => savedFrame;
+  @override
+  Future<void> setLocalFlutterOption(
+          {required String k, required String v, dynamic hint}) async {}
   @override
   String mainGetEnv({required String key, dynamic hint}) => '';
   @override
@@ -103,6 +118,45 @@ void main() {
       return null;
     });
   });
+
+  for (final direction in TextDirection.values) {
+    testWidgets('connection menu stays beside its full button in $direction',
+        (tester) async {
+      Get.put(false.obs, tag: 'stop-service');
+      addTearDown(() => Get.delete<RxBool>(tag: 'stop-service'));
+      final enabled = gFFI.peerTabModel.isEnabled.toList();
+      gFFI.peerTabModel.isEnabled.fillRange(0, enabled.length, false);
+      addTearDown(() => gFFI.peerTabModel.isEnabled = enabled);
+      await tester.pumpWidget(MaterialApp(
+        theme: MyTheme.lightTheme,
+        builder: (context, child) =>
+            Directionality(textDirection: direction, child: child!),
+        home: Scaffold(
+          body: ChangeNotifierProvider.value(
+            value: gFFI.peerTabModel,
+            child: const ConnectionPage(),
+          ),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 400));
+      final center = tester.getCenter(find.byIcon(IconFont.more));
+      for (final point in [center, center + const Offset(16, 0)]) {
+        await tester.tapAt(point);
+        await tester.pump(const Duration(milliseconds: 400));
+        final menuItem = find.text(binding.translations['Transfer file']!);
+        expect(menuItem, findsOneWidget);
+        final menu = tester.getRect(menuItem);
+        expect(menu.left, lessThan(center.dx + 50));
+        expect(menu.right, greaterThan(center.dx - 50));
+        expect(menu.top, greaterThan(center.dy + 20));
+        await tester.tapAt(const Offset(750, 550));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(menuItem, findsNothing);
+      }
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }, skip: !Platform.isWindows);
+  }
 
   testWidgets('portable home sidebar scrolls to the install prompt',
       (tester) async {

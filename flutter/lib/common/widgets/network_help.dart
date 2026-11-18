@@ -871,7 +871,21 @@ class _NetworkAdminPanelState extends State<NetworkAdminPanel> {
                       const SizedBox(width: 6), _CountBadge(_items.length),
                     ],
                   ]),
-                  onSelected: (_) => setState(() => _section = tab.$1)),
+                  onSelected: (_) {
+                    if (isMobile && tab.$1 == 1) {
+                      Navigator.of(context).push(MaterialPageRoute<void>(
+                        builder: (_) => Scaffold(
+                          appBar: AppBar(title: Text(translate('Support history'))),
+                          body: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: HelpHistoryView(key: _historyKey),
+                          ),
+                        ),
+                      ));
+                    } else {
+                      setState(() => _section = tab.$1);
+                    }
+                  }),
           ]),
         const SizedBox(height: 16),
         Expanded(

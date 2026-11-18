@@ -228,11 +228,14 @@ void main() {
             }));
   });
 
-  testWidgets('narrow RTL dashboard keeps Shabnam and English LTR numbers',
+  testWidgets('mobile RTL history has room to browse and keeps English LTR numbers',
       (tester) async {
-    tester.view.physicalSize = const Size(360, 900);
+    tester.view.physicalSize = const Size(360, 740);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    final wasMobile = isMobile;
+    isMobile = true;
+    addTearDown(() => isMobile = wasMobile);
     await http.runWithClient(() async {
       try {
         await tester.pumpWidget(_host(
@@ -250,13 +253,21 @@ void main() {
 
         await tester.tap(find.text('Support history'));
         await tester.pumpAndSettle();
+        expect(tester.getSize(find.byType(ListView)).height, greaterThan(300));
         expect(find.text('Printer fixed'), findsOneWidget);
+        expect(find.text('Parsipol support'), findsNothing);
         expect(tester.widget<Text>(find.text('7')).textDirection,
             TextDirection.ltr);
         expect(tester.widget<Text>(find.text('13:30')).textDirection,
             TextDirection.ltr);
         expect(tester.widgetList<Text>(find.byType(Text)).any((text) =>
             RegExp(r'[۰-۹٠-٩]').hasMatch(text.data ?? '')), isFalse);
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        expect(find.text('Parsipol support'), findsOneWidget);
+        await tester.tap(find.text('Support history'));
+        await tester.pumpAndSettle();
+        expect(find.text('Printer fixed'), findsOneWidget);
         expect(tester.takeException(), isNull);
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());

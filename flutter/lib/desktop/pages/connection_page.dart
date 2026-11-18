@@ -449,10 +449,9 @@ class _ConnectionPageState extends State<ConnectionPage>
                           : Theme.of(context).dividerColor),
                   borderRadius: BorderRadius.circular(isWindows ? 12 : 8),
                 ),
-                child: Center(
+                child: SizedBox.expand(
                   child: StatefulBuilder(
                     builder: (context, setState) {
-                      var offset = Offset(0, 0);
                       return Obx(() => InkWell(
                             child: _menuOpen.value
                                 ? Transform.rotate(
@@ -460,17 +459,29 @@ class _ConnectionPageState extends State<ConnectionPage>
                                     child: Icon(IconFont.more, size: 14),
                                   )
                                 : Icon(IconFont.more, size: 14),
-                            onTapDown: (e) {
-                              offset = e.globalPosition;
-                            },
                             onTap: () async {
                               _menuOpen.value = true;
-                              final x = offset.dx;
-                              final y = offset.dy;
+                              final button =
+                                  context.findRenderObject()! as RenderBox;
+                              final overlay = Navigator.of(context)
+                                  .overlay!
+                                  .context
+                                  .findRenderObject()! as RenderBox;
+                              final position = RelativeRect.fromRect(
+                                Rect.fromPoints(
+                                  button.localToGlobal(
+                                      Offset(0, button.size.height),
+                                      ancestor: overlay),
+                                  button.localToGlobal(
+                                      button.size.bottomRight(Offset.zero),
+                                      ancestor: overlay),
+                                ),
+                                Offset.zero & overlay.size,
+                              );
                               await mod_menu
                                   .showMenu(
                                 context: context,
-                                position: RelativeRect.fromLTRB(x, y, x, y),
+                                position: position,
                                 items: [
                                   (
                                     'Transfer file',
