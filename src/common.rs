@@ -1086,7 +1086,7 @@ pub fn apply_parsidesk_defaults() {
 
 // User-facing version, independent of the protocol VERSION; tracks the package so update prompts only fire for newer releases.
 pub const PARSIDESK_VERSION: &str = env!("CARGO_PKG_VERSION");
-const PARSIDESK_VERSION_URL: &str = "https://desk.parsipol.com/version.json";
+const PARSIDESK_VERSION_URL: &str = "https://desk.parsipol.com/update/staff.json";
 
 pub fn check_software_update() {
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);
