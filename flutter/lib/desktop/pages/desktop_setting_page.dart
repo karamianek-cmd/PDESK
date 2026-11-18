@@ -2686,11 +2686,12 @@ class _AboutState extends State<_About> {
       };
     }(), hasData: (data) {
       final license = data['license'].toString();
+      final version = data['version'].toString();
       final buildDate = data['buildDate'].toString();
       final fingerprint = data['fingerprint'].toString();
       final myId = data['myId'].toString();
       if (isWindows) {
-        return _winAbout(context, license, buildDate, fingerprint, myId);
+        return _winAbout(context, license, buildDate, fingerprint, myId, version);
       }
       const linkStyle = TextStyle(decoration: TextDecoration.underline);
       final scrollController = ScrollController();
@@ -2721,7 +2722,7 @@ class _AboutState extends State<_About> {
                   ),
                 ).marginSymmetric(vertical: 6.0),
               SelectionArea(
-                  child: Text('${translate('Version')}: $kParsiDeskVersion')
+                  child: Text('${translate('Version')}: $version')
                       .marginSymmetric(vertical: 4.0)),
               SelectionArea(
                   child: Text('${translate('Build Date')}: $buildDate')
@@ -2767,7 +2768,7 @@ class _AboutState extends State<_About> {
                           fontSize: 12, color: PdTokens.muted(context)),
                     ),
                     Text(
-                      'Copyright © ${DateTime.now().toString().substring(0, 4)} Purslane Tech Pte. Ltd.\n$license',
+                      license,
                       textDirection: TextDirection.ltr,
                       style: TextStyle(
                           fontSize: 9,
@@ -2787,7 +2788,7 @@ class _AboutState extends State<_About> {
 
 // Windows About page: brand, details, what's new, links and licence.
 Widget _winAbout(BuildContext context, String license, String buildDate,
-    String fingerprint, String myId) {
+    String fingerprint, String myId, String version) {
   final muted = PdTokens.muted(context);
   final rtl = Directionality.of(context) == TextDirection.rtl;
   Widget section(String title, Widget child) => Container(
@@ -2888,7 +2889,7 @@ Widget _winAbout(BuildContext context, String license, String buildDate,
                         color: PdTokens.accent(context).withOpacity(0.10),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text('${translate('Version')} $kParsiDeskVersion',
+                      child: Text('${translate('Version')} $version',
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -2918,7 +2919,7 @@ Widget _winAbout(BuildContext context, String license, String buildDate,
               section(
                 'Details',
                 Column(children: [
-                  info('Version', kParsiDeskVersion),
+                  info('Version', version),
                   info('Build Date', buildDate),
                   info('ID', myId),
                   info('Fingerprint', fingerprint),
@@ -2927,17 +2928,18 @@ Widget _winAbout(BuildContext context, String license, String buildDate,
               section(
                 "What's new in this version",
                 Column(children: [
-                  news(Icons.handyman_outlined,
-                      'Support tools for Windows computers'),
-                  news(Icons.support_agent_outlined,
-                      'Help requests with an optional note and screenshot'),
+                  news(Icons.space_dashboard_rounded,
+                      'Support-first home page with a live support dashboard'),
+                  news(Icons.graphic_eq_rounded,
+                      'Reduce audio echo during calls'),
                   news(Icons.history_rounded,
-                      'Ticket priority and support history for network admins'),
-                  news(Icons.wifi_tethering_rounded,
-                      'Automatic reconnect when the connection drops'),
-                  news(Icons.text_fields_rounded,
-                      'IRANSans font and a cleaner main screen'),
-                  news(Icons.tune_rounded, 'Redesigned settings and About'),
+                      'Support history with a note after each session'),
+                  news(Icons.verified_user_rounded,
+                      'Labs automatically accept signed-in staff'),
+                  news(Icons.admin_panel_settings_rounded,
+                      'Super admin controls support capabilities per admin'),
+                  news(Icons.system_update_alt_rounded,
+                      'Automatic update with verified install on Windows'),
                 ]),
               ),
               Wrap(spacing: 10, runSpacing: 10, children: [
@@ -2963,7 +2965,7 @@ Widget _winAbout(BuildContext context, String license, String buildDate,
                       Text(translate('license_notice'),
                           style: TextStyle(fontSize: 12, color: muted)),
                       Text(
-                        'Copyright © ${DateTime.now().toString().substring(0, 4)} Purslane Tech Pte. Ltd.\n$license',
+                        license,
                         textDirection: TextDirection.ltr,
                         style: TextStyle(
                             fontSize: 9,

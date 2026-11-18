@@ -1232,13 +1232,14 @@ void showThemeSettings(OverlayDialogManager dialogManager) async {
   }, backDismiss: true, clickMaskDismiss: true);
 }
 
-void showAbout(OverlayDialogManager dialogManager) {
+void showAbout(OverlayDialogManager dialogManager) async {
+  final version = await bind.mainGetVersion();
   dialogManager.show((setState, close, context) {
     return CustomAlertDialog(
       title: Text(translate('About RustDesk')),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
         const ParsiDeskHeader(),
-        Text('${translate('Version')}: $kParsiDeskVersion'),
+        Text('${translate('Version')}: $version'),
         const Text('ParsiDesk ساخته‌شده توسط پارسیپل (Parsipol.com)'),
         SizedBox(
             width: 260,
