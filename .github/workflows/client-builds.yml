@@ -1,4 +1,4 @@
-﻿name: Client builds (artifacts only)
+﻿name: STAFF Windows and Android builds (artifacts only)
 # STAFF test builds: manual dispatch only
 
 on:
